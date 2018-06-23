@@ -78,8 +78,6 @@ func (n *Func) Calc(vars Vars) (float64, error) {
 		return math.Log10(x), nil
 	case hash.Erf:
 		return math.Erf(x), nil
-	case hash.Inverf:
-		return math.Erfinv(x), nil
 	case hash.Gamma:
 		return math.Gamma(x), nil
 	default:
