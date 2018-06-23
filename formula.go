@@ -10,11 +10,8 @@ func (v Vars) Set(name string, f float64) {
 
 var DefaultVars = Vars{
 	"e":   math.E,
-	"E":   math.E,
 	"pi":  math.Pi,
-	"Pi":  math.Pi,
 	"phi": math.Phi,
-	"Phi": math.Phi,
 }
 
 ////////////////

@@ -41,24 +41,24 @@ func (n *Func) Calc(vars Vars) (float64, error) {
 		return math.Cos(x), nil
 	case hash.Tan:
 		return math.Tan(x), nil
-	case hash.Csc:
-		x = math.Sin(x)
-		if x == 0 {
-			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
-		}
-		return 1 / x, nil
-	case hash.Sec:
-		x = math.Cos(x)
-		if x == 0 {
-			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
-		}
-		return 1 / x, nil
-	case hash.Cot:
-		x = math.Tan(x)
-		if x == 0 {
-			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
-		}
-		return 1 / x, nil
+	case hash.Arcsin:
+		return math.Asin(x), nil
+	case hash.Arccos:
+		return math.Acos(x), nil
+	case hash.Arctan:
+		return math.Atan(x), nil
+	case hash.Sinh:
+		return math.Sinh(x), nil
+	case hash.Cosh:
+		return math.Cosh(x), nil
+	case hash.Tanh:
+		return math.Tanh(x), nil
+	case hash.Arcsinh:
+		return math.Asinh(x), nil
+	case hash.Arccosh:
+		return math.Acosh(x), nil
+	case hash.Arctanh:
+		return math.Atanh(x), nil
 	case hash.Exp:
 		return math.Exp(x), nil
 	case hash.Log, hash.Ln:
@@ -78,6 +78,8 @@ func (n *Func) Calc(vars Vars) (float64, error) {
 		return math.Log10(x), nil
 	case hash.Erf:
 		return math.Erf(x), nil
+	case hash.Gamma:
+		return math.Gamma(x), nil
 	default:
 		return math.NaN(), ParseErrorf(n.Pos, "unknown function '%s'", n.Name)
 	}

@@ -211,17 +211,15 @@ func (l *Lexer) consumeIdentifierToken() TokenType {
 		}
 	}
 
-	ident := l.r.Lexeme()
-	if ident[0] >= 'A' && ident[0] <= 'Z' {
-		ident = parse.Copy(l.r.Lexeme())
-		ident[0] += 'a' - 'A'
-	}
-
+	ident := parse.ToLower(parse.Copy(l.r.Lexeme()))
 	h := hash.ToHash(ident)
 	if h != 0 {
 		l.lastOp = FuncOp
 		l.lastFunc = h
 		return OperatorToken
+	}
+	if _, ok := DefaultVars[string(ident)]; ok {
+		parse.ToLower(l.r.Lexeme())
 	}
 	return IdentifierToken
 }

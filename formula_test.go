@@ -17,6 +17,7 @@ func TestCalc(t *testing.T) {
 		{"sin(pi)", 0},
 		{"sin(pi/2)", 1},
 		{"ln(e)", 1},
+		{"LN(E)", 1},
 	}
 
 	vars := Vars{
