@@ -1,6 +1,9 @@
 package formulae
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 type Vars map[string]float64
 
@@ -30,7 +33,7 @@ func (f *Formula) Calc(vars Vars) (float64, error) {
 	return f.root.Calc(vars)
 }
 
-func (f *Formula) Interval(xMin, xStep, xMax float64) ([]float64, []float64, error) {
+func (f *Formula) Interval(xMin, xStep, xMax float64) ([]float64, []float64, []error) {
 	n := int((xMax-xMin)/xStep) + 1
 	xs := make([]float64, n)
 	ys := make([]float64, n)
@@ -40,11 +43,13 @@ func (f *Formula) Interval(xMin, xStep, xMax float64) ([]float64, []float64, err
 	}
 
 	x := xMin
+	var errs []error
 	for i := 0; i < n; i++ {
 		vars["x"] = x
 		y, err := f.Calc(vars)
 		if err != nil {
-			return nil, nil, err
+			errs = append(errs, fmt.Errorf("%v (x = %v)", err, x))
+			continue
 		}
 
 		xs[i] = x
@@ -52,5 +57,5 @@ func (f *Formula) Interval(xMin, xStep, xMax float64) ([]float64, []float64, err
 
 		x += xStep
 	}
-	return xs, ys, nil
+	return xs, ys, errs
 }
