@@ -27,31 +27,60 @@ func (n *Func) String() string {
 func (n *Func) Calc(vars Vars) (float64, error) {
 	x, err := n.X.Calc(vars)
 	if err != nil {
-		return 0, err
+		return math.NaN(), err
 	}
 
 	switch n.Name {
 	case hash.Sqrt:
 		return math.Sqrt(x), nil
+	case hash.Cbrt:
+		return math.Cbrt(x), nil
 	case hash.Sin:
 		return math.Sin(x), nil
+	case hash.Cos:
+		return math.Cos(x), nil
+	case hash.Tan:
+		return math.Tan(x), nil
+	case hash.Csc:
+		x = math.Sin(x)
+		if x == 0 {
+			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
+		}
+		return 1 / x, nil
+	case hash.Sec:
+		x = math.Cos(x)
+		if x == 0 {
+			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
+		}
+		return 1 / x, nil
+	case hash.Cot:
+		x = math.Tan(x)
+		if x == 0 {
+			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
+		}
+		return 1 / x, nil
+	case hash.Exp:
+		return math.Exp(x), nil
+	case hash.Log, hash.Ln:
+		if x < 0 {
+			return math.NaN(), ParseErrorf(n.Pos, "logarithm of negative number")
+		}
+		return math.Log(x), nil
+	case hash.Log2:
+		if x < 0 {
+			return math.NaN(), ParseErrorf(n.Pos, "logarithm of negative number")
+		}
+		return math.Log2(x), nil
+	case hash.Log10:
+		if x < 0 {
+			return math.NaN(), ParseErrorf(n.Pos, "logarithm of negative number")
+		}
+		return math.Log10(x), nil
+	case hash.Erf:
+		return math.Erf(x), nil
 	default:
-		return 0, ParseErrorf(n.Pos, "unknown function '%s'", n.Name)
+		return math.NaN(), ParseErrorf(n.Pos, "unknown function '%s'", n.Name)
 	}
-}
-
-////////////////
-
-type Group struct {
-	X Node
-}
-
-func (n *Group) String() string {
-	return fmt.Sprintf("%v", n.X)
-}
-
-func (n *Group) Calc(vars Vars) (float64, error) {
-	return n.X.Calc(vars)
 }
 
 ////////////////
@@ -70,12 +99,12 @@ func (n *Expr) String() string {
 func (n *Expr) Calc(vars Vars) (float64, error) {
 	x, err := n.X.Calc(vars)
 	if err != nil {
-		return 0, err
+		return math.NaN(), err
 	}
 
 	y, err := n.Y.Calc(vars)
 	if err != nil {
-		return 0, err
+		return math.NaN(), err
 	}
 
 	switch n.Op {
@@ -87,13 +116,13 @@ func (n *Expr) Calc(vars Vars) (float64, error) {
 		return x * y, nil
 	case DivideOp:
 		if y == 0 {
-			return 0, ParseErrorf(n.Pos, "division by zero")
+			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
 		}
 		return x / y, nil
 	case PowerOp:
 		return math.Pow(x, y), nil
 	default:
-		return 0, ParseErrorf(n.Pos, "unknown operation '%s'", n.Op)
+		return math.NaN(), ParseErrorf(n.Pos, "unknown operation '%s'", n.Op)
 	}
 }
 
@@ -112,7 +141,7 @@ func (n *UnaryExpr) String() string {
 func (n *UnaryExpr) Calc(vars Vars) (float64, error) {
 	x, err := n.X.Calc(vars)
 	if err != nil {
-		return 0, err
+		return math.NaN(), err
 	}
 	return -x, nil
 }
@@ -132,7 +161,7 @@ func (n *Variable) Calc(vars Vars) (float64, error) {
 	if val, ok := vars[n.Name]; ok {
 		return val, nil
 	}
-	return 0, ParseErrorf(n.Pos, "undeclared variable '%s'", n.Name)
+	return math.NaN(), ParseErrorf(n.Pos, "undeclared variable '%s'", n.Name)
 }
 
 ////////////////

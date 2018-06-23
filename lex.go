@@ -198,7 +198,7 @@ func (l *Lexer) consumeIdentifierToken() TokenType {
 	// Already on second identifier character
 	for {
 		c := l.r.Peek(0)
-		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
 			l.r.Move(1)
 		} else if c >= 0xC0 {
 			if r, n := l.r.PeekRune(0); r == '\u200C' || r == '\u200D' || unicode.IsOneOf(identifierContinue, r) {

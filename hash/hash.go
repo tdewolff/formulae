@@ -10,8 +10,20 @@ type Hash uint32
 
 // Unique hash definitions to be used instead of strings
 const (
-	Sin  Hash = 0x3   // sin
-	Sqrt Hash = 0x304 // sqrt
+	Cbrt  Hash = 0x904  // cbrt
+	Cos   Hash = 0x503  // cos
+	Cot   Hash = 0x3    // cot
+	Csc   Hash = 0x303  // csc
+	Erf   Hash = 0xf03  // erf
+	Exp   Hash = 0x1203 // exp
+	Ln    Hash = 0x1502 // ln
+	Log   Hash = 0x1703 // log
+	Log10 Hash = 0x1705 // log10
+	Log2  Hash = 0x1c04 // log2
+	Sec   Hash = 0x703  // sec
+	Sin   Hash = 0x2003 // sin
+	Sqrt  Hash = 0x2304 // sqrt
+	Tan   Hash = 0xc03  // tan
 )
 
 // String returns the hash' name.
@@ -57,11 +69,23 @@ NEXT:
 	return 0
 }
 
-const _Hash_hash0 = 0x9acb0442
-const _Hash_maxLen = 4
-const _Hash_text = "sinsqrt"
+const _Hash_hash0 = 0xf0c5341e
+const _Hash_maxLen = 5
+const _Hash_text = "cotcscosecbrtanerfexplnlog10log2sinsqrt"
 
-var _Hash_table = [1 << 1]Hash{
-	0x0: 0x3,   // sin
-	0x1: 0x304, // sqrt
+var _Hash_table = [1 << 4]Hash{
+	0x1: 0x503,  // cos
+	0x2: 0x1c04, // log2
+	0x4: 0x1502, // ln
+	0x5: 0x1203, // exp
+	0x6: 0xf03,  // erf
+	0x7: 0x1703, // log
+	0x8: 0x303,  // csc
+	0x9: 0x904,  // cbrt
+	0xa: 0x3,    // cot
+	0xb: 0xc03,  // tan
+	0xc: 0x2003, // sin
+	0xd: 0x1705, // log10
+	0xe: 0x2304, // sqrt
+	0xf: 0x703,  // sec
 }

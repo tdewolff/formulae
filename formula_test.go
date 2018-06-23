@@ -1,8 +1,11 @@
 package formulae
 
 import (
+	"math"
 	"testing"
 )
+
+var Epsilon = 1e-6
 
 func TestCalc(t *testing.T) {
 	tests := []struct {
@@ -11,6 +14,9 @@ func TestCalc(t *testing.T) {
 	}{
 		{"1+2*3", 7},
 		{"4x", 20},
+		{"sin(pi)", 0},
+		{"sin(pi/2)", 1},
+		{"ln(e)", 1},
 	}
 
 	vars := Vars{
@@ -28,7 +34,7 @@ func TestCalc(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if f != test.out {
+			if math.Abs(f-test.out) > Epsilon {
 				t.Fatal(f, "!=", test.out)
 			}
 		})

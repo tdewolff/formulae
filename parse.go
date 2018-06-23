@@ -3,7 +3,6 @@ package formulae
 import (
 	"fmt"
 	"io"
-	"math"
 	"strconv"
 	"strings"
 
@@ -26,15 +25,17 @@ func (t SYToken) String() string {
 }
 
 var OpPrec = map[Operator]int{
-	MultiplyOp: 1,
-	DivideOp:   1,
-	PowerOp:    2,
-	MinusOp:    3,
+	FuncOp:     1,
+	MultiplyOp: 2,
+	DivideOp:   2,
+	PowerOp:    3,
+	MinusOp:    4,
 }
 
 var OpRightAssoc = map[Operator]bool{
 	PowerOp: true,
 	MinusOp: true,
+	FuncOp:  true,
 }
 
 type ParseError struct {
@@ -101,7 +102,7 @@ LOOP:
 			default:
 				for len(p.operatorStack) > 0 {
 					stack := p.operatorStack[len(p.operatorStack)-1].op
-					if !(stack == FuncOp || OpPrec[stack] > OpPrec[op] || !OpRightAssoc[stack] && OpPrec[stack] == OpPrec[op]) || stack == OpenOp {
+					if !(OpPrec[stack] > OpPrec[op] || !OpRightAssoc[stack] && OpPrec[stack] == OpPrec[op]) || stack == OpenOp {
 						break
 					}
 					p.popOperation()
@@ -122,10 +123,13 @@ LOOP:
 		return nil, []error{fmt.Errorf("empty formula")}
 	}
 
-	vars := Vars{}
+	varNames := map[string]bool{}
 	for _, tok := range p.output {
 		if tok.tt == IdentifierToken {
-			vars[string(tok.data)] = math.NaN()
+			name := string(tok.data)
+			if _, ok := DefaultVars[name]; !ok {
+				varNames[name] = true
+			}
 		}
 	}
 
@@ -138,8 +142,8 @@ LOOP:
 	}
 
 	return &Formula{
-		root: root,
-		vars: vars,
+		root:     root,
+		varNames: varNames,
 	}, nil
 }
 
@@ -173,8 +177,7 @@ func (p *Parser) popNode() (Node, error) {
 			n, _ := p.popNode()
 			return &Func{tok.pos, tok.function, n}, nil
 		case OpenOp:
-			n, _ := p.popNode()
-			return &Group{n}, nil
+			return p.popNode()
 		case MinusOp:
 			n, _ := p.popNode()
 			return &UnaryExpr{tok.pos, tok.op, n}, nil
