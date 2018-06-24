@@ -164,11 +164,42 @@ func (p *Parser) popNode() (Node, error) {
 
 	switch tok.tt {
 	case NumericToken:
-		f, err := strconv.ParseFloat(string(tok.data), 64)
-		if err != nil {
-			return nil, ParseErrorf(tok.pos, "could not parse number: %v", err)
+		hasReal := true
+		hasImag := tok.data[len(tok.data)-1] == 'i'
+		iPlus := len(tok.data)
+		if hasImag {
+			hasReal = false
+			iPlus = -1
+			for i := 0; i < len(tok.data); i++ {
+				if tok.data[i] == '+' {
+					hasReal = true
+					iPlus = i
+					break
+				} else if tok.data[i] == 'e' || tok.data[i] == 'E' {
+					i++
+				}
+			}
 		}
-		return &Number{tok.pos, f}, nil
+
+		var err error
+		fr, fi := 0.0, 0.0
+		if hasReal {
+			fr, err = strconv.ParseFloat(string(tok.data[:iPlus]), 64)
+			if err != nil {
+				return nil, ParseErrorf(tok.pos, "could not parse number: %v", err)
+			}
+		}
+		if hasImag {
+			if len(tok.data) == 1 {
+				fi = 1.0
+			} else {
+				fi, err = strconv.ParseFloat(string(tok.data[iPlus+1:len(tok.data)-1]), 64)
+				if err != nil {
+					return nil, ParseErrorf(tok.pos, "could not parse number: %v", err)
+				}
+			}
+		}
+		return &Number{tok.pos, complex(fr, fi)}, nil
 	case IdentifierToken:
 		return &Variable{tok.pos, string(tok.data)}, nil
 	case OperatorToken:

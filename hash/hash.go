@@ -10,28 +10,23 @@ type Hash uint32
 
 // Unique hash definitions to be used instead of strings
 const (
-	Arccos  Hash = 0x1906 // arccos
-	Arccosh Hash = 0x1907 // arccosh
-	Arcsin  Hash = 0x6    // arcsin
-	Arcsinh Hash = 0x7    // arcsinh
-	Arctan  Hash = 0x706  // arctan
-	Arctanh Hash = 0x707  // arctanh
-	Cbrt    Hash = 0xe04  // cbrt
-	Cos     Hash = 0x1c03 // cos
-	Cosh    Hash = 0x1c04 // cosh
-	Erf     Hash = 0x2303 // erf
-	Exp     Hash = 0x1203 // exp
-	Gamma   Hash = 0x1505 // gamma
-	Inverf  Hash = 0x2006 // inverf
-	Ln      Hash = 0x2602 // ln
-	Log     Hash = 0x2803 // log
-	Log10   Hash = 0x2805 // log10
-	Log2    Hash = 0x2d04 // log2
-	Sin     Hash = 0x303  // sin
-	Sinh    Hash = 0x304  // sinh
-	Sqrt    Hash = 0x3104 // sqrt
-	Tan     Hash = 0xa03  // tan
-	Tanh    Hash = 0xa04  // tanh
+	Arccos  Hash = 0x6    // arccos
+	Arccosh Hash = 0x7    // arccosh
+	Arcsin  Hash = 0x706  // arcsin
+	Arcsinh Hash = 0x707  // arcsinh
+	Arctan  Hash = 0xe06  // arctan
+	Arctanh Hash = 0xe07  // arctanh
+	Cos     Hash = 0x303  // cos
+	Cosh    Hash = 0x304  // cosh
+	Exp     Hash = 0x1503 // exp
+	Ln      Hash = 0x1802 // ln
+	Log     Hash = 0x1a03 // log
+	Log10   Hash = 0x1a05 // log10
+	Sin     Hash = 0xa03  // sin
+	Sinh    Hash = 0xa04  // sinh
+	Sqrt    Hash = 0x1f04 // sqrt
+	Tan     Hash = 0x1103 // tan
+	Tanh    Hash = 0x1104 // tanh
 )
 
 // String returns the hash' name.
@@ -77,31 +72,26 @@ NEXT:
 	return 0
 }
 
-const _Hash_hash0 = 0xf0c5341e
+const _Hash_hash0 = 0x9acb0442
 const _Hash_maxLen = 7
-const _Hash_text = "arcsinharctanhcbrtexpgammarccoshinverflnlog10log2sqrt"
+const _Hash_text = "arccosharcsinharctanhexplnlog10sqrt"
 
 var _Hash_table = [1 << 5]Hash{
-	0x0:  0x7,    // arcsinh
-	0x1:  0x1c04, // cosh
-	0x2:  0x706,  // arctan
-	0x3:  0xa04,  // tanh
-	0x4:  0x2602, // ln
-	0x5:  0x1203, // exp
-	0x7:  0x1505, // gamma
-	0x8:  0x6,    // arcsin
-	0x9:  0x2805, // log10
-	0xd:  0x1906, // arccos
-	0xe:  0x2006, // inverf
-	0xf:  0x304,  // sinh
-	0x11: 0x1c03, // cos
-	0x12: 0x2d04, // log2
-	0x14: 0x2803, // log
-	0x16: 0x2303, // erf
-	0x19: 0xa03,  // tan
-	0x1b: 0x303,  // sin
-	0x1c: 0x3104, // sqrt
-	0x1d: 0x707,  // arctanh
-	0x1e: 0xe04,  // cbrt
-	0x1f: 0x1907, // arccosh
+	0x0:  0x1103, // tan
+	0x4:  0x706,  // arcsin
+	0x5:  0x303,  // cos
+	0x7:  0x1104, // tanh
+	0x8:  0xa04,  // sinh
+	0x9:  0x6,    // arccos
+	0xa:  0x707,  // arcsinh
+	0xb:  0x1f04, // sqrt
+	0xc:  0x1802, // ln
+	0xf:  0x1a05, // log10
+	0x10: 0xa03,  // sin
+	0x11: 0xe06,  // arctan
+	0x13: 0x7,    // arccosh
+	0x15: 0x1503, // exp
+	0x17: 0x304,  // cosh
+	0x1b: 0xe07,  // arctanh
+	0x1f: 0x1a03, // log
 }

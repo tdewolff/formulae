@@ -2,14 +2,14 @@ package formulae
 
 import (
 	"fmt"
-	"math"
+	"math/cmplx"
 
 	"github.com/tdewolff/formulae/hash"
 )
 
 type Node interface {
 	String() string
-	Calc(Vars) (float64, error)
+	Calc(Vars) (complex128, error)
 }
 
 ////////////////
@@ -24,64 +24,47 @@ func (n *Func) String() string {
 	return fmt.Sprintf("(%v %v)", n.Name, n.X)
 }
 
-func (n *Func) Calc(vars Vars) (float64, error) {
+func (n *Func) Calc(vars Vars) (complex128, error) {
 	x, err := n.X.Calc(vars)
 	if err != nil {
-		return math.NaN(), err
+		return cmplx.NaN(), err
 	}
 
 	switch n.Name {
 	case hash.Sqrt:
-		return math.Sqrt(x), nil
-	case hash.Cbrt:
-		return math.Cbrt(x), nil
+		return cmplx.Sqrt(x), nil
 	case hash.Sin:
-		return math.Sin(x), nil
+		return cmplx.Sin(x), nil
 	case hash.Cos:
-		return math.Cos(x), nil
+		return cmplx.Cos(x), nil
 	case hash.Tan:
-		return math.Tan(x), nil
+		return cmplx.Tan(x), nil
 	case hash.Arcsin:
-		return math.Asin(x), nil
+		return cmplx.Asin(x), nil
 	case hash.Arccos:
-		return math.Acos(x), nil
+		return cmplx.Acos(x), nil
 	case hash.Arctan:
-		return math.Atan(x), nil
+		return cmplx.Atan(x), nil
 	case hash.Sinh:
-		return math.Sinh(x), nil
+		return cmplx.Sinh(x), nil
 	case hash.Cosh:
-		return math.Cosh(x), nil
+		return cmplx.Cosh(x), nil
 	case hash.Tanh:
-		return math.Tanh(x), nil
+		return cmplx.Tanh(x), nil
 	case hash.Arcsinh:
-		return math.Asinh(x), nil
+		return cmplx.Asinh(x), nil
 	case hash.Arccosh:
-		return math.Acosh(x), nil
+		return cmplx.Acosh(x), nil
 	case hash.Arctanh:
-		return math.Atanh(x), nil
+		return cmplx.Atanh(x), nil
 	case hash.Exp:
-		return math.Exp(x), nil
+		return cmplx.Exp(x), nil
 	case hash.Log, hash.Ln:
-		if x < 0 {
-			return math.NaN(), ParseErrorf(n.Pos, "logarithm of negative number")
-		}
-		return math.Log(x), nil
-	case hash.Log2:
-		if x < 0 {
-			return math.NaN(), ParseErrorf(n.Pos, "logarithm of negative number")
-		}
-		return math.Log2(x), nil
+		return cmplx.Log(x), nil
 	case hash.Log10:
-		if x < 0 {
-			return math.NaN(), ParseErrorf(n.Pos, "logarithm of negative number")
-		}
-		return math.Log10(x), nil
-	case hash.Erf:
-		return math.Erf(x), nil
-	case hash.Gamma:
-		return math.Gamma(x), nil
+		return cmplx.Log10(x), nil
 	default:
-		return math.NaN(), ParseErrorf(n.Pos, "unknown function '%s'", n.Name)
+		return cmplx.NaN(), ParseErrorf(n.Pos, "unknown function '%s'", n.Name)
 	}
 }
 
@@ -98,15 +81,15 @@ func (n *Expr) String() string {
 	return fmt.Sprintf("(%v %v %v)", n.X, n.Op, n.Y)
 }
 
-func (n *Expr) Calc(vars Vars) (float64, error) {
+func (n *Expr) Calc(vars Vars) (complex128, error) {
 	x, err := n.X.Calc(vars)
 	if err != nil {
-		return math.NaN(), err
+		return cmplx.NaN(), err
 	}
 
 	y, err := n.Y.Calc(vars)
 	if err != nil {
-		return math.NaN(), err
+		return cmplx.NaN(), err
 	}
 
 	switch n.Op {
@@ -118,13 +101,13 @@ func (n *Expr) Calc(vars Vars) (float64, error) {
 		return x * y, nil
 	case DivideOp:
 		if y == 0 {
-			return math.NaN(), ParseErrorf(n.Pos, "division by zero")
+			return cmplx.Inf(), ParseErrorf(n.Pos, "division by zero") // TODO: set sign
 		}
 		return x / y, nil
 	case PowerOp:
-		return math.Pow(x, y), nil
+		return cmplx.Pow(x, y), nil
 	default:
-		return math.NaN(), ParseErrorf(n.Pos, "unknown operation '%s'", n.Op)
+		return cmplx.NaN(), ParseErrorf(n.Pos, "unknown operation '%s'", n.Op)
 	}
 }
 
@@ -140,12 +123,9 @@ func (n *UnaryExpr) String() string {
 	return fmt.Sprintf("(%v %v)", n.Op, n.X)
 }
 
-func (n *UnaryExpr) Calc(vars Vars) (float64, error) {
+func (n *UnaryExpr) Calc(vars Vars) (complex128, error) {
 	x, err := n.X.Calc(vars)
-	if err != nil {
-		return math.NaN(), err
-	}
-	return -x, nil
+	return -x, err
 }
 
 ////////////////
@@ -159,24 +139,27 @@ func (n *Variable) String() string {
 	return fmt.Sprintf("'%s'", n.Name)
 }
 
-func (n *Variable) Calc(vars Vars) (float64, error) {
+func (n *Variable) Calc(vars Vars) (complex128, error) {
 	if val, ok := vars[n.Name]; ok {
 		return val, nil
 	}
-	return math.NaN(), ParseErrorf(n.Pos, "undeclared variable '%s'", n.Name)
+	return cmplx.NaN(), ParseErrorf(n.Pos, "undeclared variable '%s'", n.Name)
 }
 
 ////////////////
 
 type Number struct {
 	Pos int
-	Val float64
+	Val complex128
 }
 
 func (n *Number) String() string {
+	if imag(n.Val) == 0 {
+		return fmt.Sprintf("'%v'", real(n.Val))
+	}
 	return fmt.Sprintf("'%v'", n.Val)
 }
 
-func (n *Number) Calc(vars Vars) (float64, error) {
+func (n *Number) Calc(vars Vars) (complex128, error) {
 	return n.Val, nil
 }

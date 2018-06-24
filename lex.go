@@ -166,7 +166,18 @@ func (l *Lexer) Function() hash.Hash {
 
 func (l *Lexer) isNumeric() bool {
 	c := l.r.Peek(0)
-	return c >= '0' && c <= '9' || c == '.'
+	if c >= '0' && c <= '9' || c == '.' {
+		return true
+	}
+	if c == 'i' {
+		l.r.Move(1)
+		isIdent, _ := l.isIdentifierContinue()
+		l.r.Move(-1)
+		if !isIdent {
+			return true
+		}
+	}
+	return false
 }
 
 func (l *Lexer) isIdentifierStart() (bool, int) {
@@ -174,8 +185,23 @@ func (l *Lexer) isIdentifierStart() (bool, int) {
 	if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
 		return true, 1
 	}
-	if r, n := l.r.PeekRune(0); unicode.IsOneOf(identifierStart, r) {
-		return true, n
+	if c >= 0xC0 {
+		if r, n := l.r.PeekRune(0); unicode.IsOneOf(identifierStart, r) {
+			return true, n
+		}
+	}
+	return false, 0
+}
+
+func (l *Lexer) isIdentifierContinue() (bool, int) {
+	c := l.r.Peek(0)
+	if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
+		return true, 1
+	}
+	if c >= 0xC0 {
+		if r, n := l.r.PeekRune(0); r == '\u200C' || r == '\u200D' || unicode.IsOneOf(identifierContinue, r) {
+			return true, n
+		}
 	}
 	return false, 0
 }
@@ -197,18 +223,11 @@ func (l *Lexer) consumeWhitespace() bool {
 func (l *Lexer) consumeIdentifierToken() TokenType {
 	// Already on second identifier character
 	for {
-		c := l.r.Peek(0)
-		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
-			l.r.Move(1)
-		} else if c >= 0xC0 {
-			if r, n := l.r.PeekRune(0); r == '\u200C' || r == '\u200D' || unicode.IsOneOf(identifierContinue, r) {
-				l.r.Move(n)
-			} else {
-				break
-			}
-		} else {
+		ok, n := l.isIdentifierContinue()
+		if !ok {
 			break
 		}
+		l.r.Move(n)
 	}
 
 	ident := parse.ToLower(parse.Copy(l.r.Lexeme()))
@@ -266,17 +285,25 @@ func (l *Lexer) consumeDigit() bool {
 }
 
 func (l *Lexer) consumeNumericToken() {
+	if l.r.Peek(-1) == 'i' {
+		return
+	}
+
 	// Already on second numeric character
 	for l.consumeDigit() {
 	}
+	dotMark := l.r.Pos()
 	if l.r.Peek(0) == '.' {
 		l.r.Move(1)
+		if !l.consumeDigit() {
+			l.r.Rewind(dotMark)
+			return
+		}
 		for l.consumeDigit() {
 		}
 	}
-	mark := l.r.Pos()
-	c := l.r.Peek(0)
-	if c == 'e' || c == 'E' {
+	expMark := l.r.Pos()
+	if c := l.r.Peek(0); c == 'e' || c == 'E' {
 		l.r.Move(1)
 		c = l.r.Peek(0)
 		if c == '+' || c == '-' {
@@ -284,10 +311,66 @@ func (l *Lexer) consumeNumericToken() {
 		}
 		if !l.consumeDigit() {
 			// e could belong to the next token
-			l.r.Rewind(mark)
+			l.r.Rewind(expMark)
 			return
 		}
 		for l.consumeDigit() {
 		}
 	}
+	mark := l.r.Pos()
+	if l.r.Peek(0) == 'i' {
+		l.r.Move(1)
+		if ok, _ := l.isIdentifierContinue(); ok {
+			l.r.Rewind(mark)
+		}
+		return
+	}
+
+	// try and parse the imaginary part of a number
+	// (whitespace)* '+' (whitespace)* [0-9]*(.[0-9]+)?([eE][+-]?[0-9]+)? 'i'
+	imagMark := l.r.Pos()
+	for l.consumeWhitespace() {
+	}
+	if l.r.Peek(0) != '+' {
+		l.r.Rewind(imagMark)
+		return
+	}
+	l.r.Move(1)
+	for l.consumeWhitespace() {
+	}
+	digitMark := l.r.Pos()
+	for l.consumeDigit() {
+	}
+	if l.r.Peek(0) == '.' {
+		l.r.Move(1)
+		if !l.consumeDigit() {
+			l.r.Rewind(imagMark)
+			return
+		}
+		for l.consumeDigit() {
+		}
+	}
+	if l.r.Pos() == digitMark {
+		l.r.Rewind(imagMark)
+		return
+	}
+	if c := l.r.Peek(0); c == 'e' || c == 'E' {
+		l.r.Move(1)
+		c = l.r.Peek(0)
+		if c == '+' || c == '-' {
+			l.r.Move(1)
+		}
+		if !l.consumeDigit() {
+			// e could belong to the next token
+			l.r.Rewind(imagMark)
+			return
+		}
+		for l.consumeDigit() {
+		}
+	}
+	if l.r.Peek(0) != 'i' {
+		l.r.Rewind(imagMark)
+		return
+	}
+	l.r.Move(1)
 }

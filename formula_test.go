@@ -1,7 +1,7 @@
 package formulae
 
 import (
-	"math"
+	"math/cmplx"
 	"testing"
 )
 
@@ -10,7 +10,7 @@ var Epsilon = 1e-6
 func TestCalc(t *testing.T) {
 	tests := []struct {
 		in  string
-		out float64
+		out complex128
 	}{
 		{"1+2*3", 7},
 		{"4x", 20},
@@ -18,7 +18,8 @@ func TestCalc(t *testing.T) {
 		{"sin(pi/2)", 1},
 		{"ln(e)", 1},
 		{"LN(E)", 1},
-		{"gamma 0", math.Inf(1)},
+		{"5+1i+6+2i", 11 + 3i},
+		{"i", 1i},
 	}
 
 	vars := Vars{
@@ -36,7 +37,7 @@ func TestCalc(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if math.Abs(f-test.out) > Epsilon {
+			if cmplx.Abs(f-test.out) > Epsilon {
 				t.Fatal(f, "!=", test.out)
 			}
 		})
