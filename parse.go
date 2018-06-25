@@ -95,13 +95,17 @@ LOOP:
 				for len(p.operatorStack) > 0 && p.operatorStack[len(p.operatorStack)-1].op != OpenOp {
 					p.popOperation()
 				}
-				if n := len(p.operatorStack); n == 0 || p.operatorStack[n-1].op != OpenOp {
+				n := len(p.operatorStack)
+				if n == 0 || p.operatorStack[n-1].op != OpenOp {
 					errs = append(errs, ParseErrorf(l.Pos(), "mismatched closing parentheses"))
 					break LOOP
+				} else if n > 1 && p.operatorStack[n-2].op == FuncOp {
+					p.popOperation()
+					p.popOperation()
 				}
 			default:
-				for len(p.operatorStack) > 0 {
-					stack := p.operatorStack[len(p.operatorStack)-1].op
+				for n := len(p.operatorStack); n > 0; n-- {
+					stack := p.operatorStack[n-1].op
 					if !(OpPrec[stack] > OpPrec[op] || !OpRightAssoc[stack] && OpPrec[stack] == OpPrec[op]) || stack == OpenOp {
 						break
 					}
