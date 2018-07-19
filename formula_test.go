@@ -22,10 +22,7 @@ func TestCalc(t *testing.T) {
 		{"i", 1i},
 	}
 
-	vars := Vars{
-		"x": 5,
-	}
-
+	x := 5 + 0i
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
 			formula, errs := Parse(test.in)
@@ -33,7 +30,7 @@ func TestCalc(t *testing.T) {
 				t.Fatal(formula, errs)
 			}
 
-			f, err := formula.Calc(vars)
+			f, err := formula.Calc(x)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -53,10 +50,7 @@ func TestCalcErr(t *testing.T) {
 		{"3/(5-x)", "2: division by zero"},
 	}
 
-	vars := Vars{
-		"x": 5,
-	}
-
+	x := 5 + 0i
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
 			formula, errs := Parse(test.in)
@@ -64,10 +58,35 @@ func TestCalcErr(t *testing.T) {
 				t.Fatal(formula, errs)
 			}
 
-			_, err := formula.Calc(vars)
+			_, err := formula.Calc(x)
 			if err.Error() != test.err {
 				t.Fatal(err.Error(), "!=", test.err)
 			}
 		})
+	}
+}
+
+var formula, _ = Parse("sin(x)^2+1/x+0.001x^3")
+var x = 5 + 1i
+var y = 0 + 0i
+
+func BenchmarkCalcNativeGo(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		y = cmplx.Pow(cmplx.Sin(x), 2) + (1 / x) + 0.001*cmplx.Pow(x, 3)
+	}
+}
+
+func BenchmarkCalcGo(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		y, _ = formula.Calc(x)
+	}
+}
+
+func BenchmarkCalcLua(b *testing.B) {
+	compiled, _ := formula.Compile()
+	defer compiled.Close()
+
+	for i := 0; i < b.N; i++ {
+		y, _ = compiled.Calc(x)
 	}
 }

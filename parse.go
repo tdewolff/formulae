@@ -127,16 +127,6 @@ LOOP:
 		return nil, []error{fmt.Errorf("empty formula")}
 	}
 
-	varNames := map[string]bool{}
-	for _, tok := range p.output {
-		if tok.tt == IdentifierToken {
-			name := string(tok.data)
-			if _, ok := DefaultVars[name]; !ok {
-				varNames[name] = true
-			}
-		}
-	}
-
 	root, err := p.popNode()
 	if err != nil {
 		return nil, []error{err}
@@ -145,10 +135,7 @@ LOOP:
 		return nil, []error{fmt.Errorf("some operands remain unparsed")}
 	}
 
-	return &Formula{
-		root:     root,
-		varNames: varNames,
-	}, nil
+	return NewFormula(root), nil
 }
 
 func (p *Parser) popOperation() {

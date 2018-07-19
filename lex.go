@@ -230,15 +230,12 @@ func (l *Lexer) consumeIdentifierToken() TokenType {
 		l.r.Move(n)
 	}
 
-	ident := parse.ToLower(parse.Copy(l.r.Lexeme()))
+	ident := parse.ToLower(l.r.Lexeme())
 	h := hash.ToHash(ident)
 	if h != 0 {
 		l.lastOp = FuncOp
 		l.lastFunc = h
 		return OperatorToken
-	}
-	if _, ok := DefaultVars[string(ident)]; ok {
-		parse.ToLower(l.r.Lexeme())
 	}
 	return IdentifierToken
 }
