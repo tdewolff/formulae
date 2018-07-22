@@ -135,7 +135,7 @@ LOOP:
 		return nil, []error{fmt.Errorf("some operands remain unparsed")}
 	}
 
-	return NewFormula(root), nil
+	return &Formula{root: root}, nil
 }
 
 func (p *Parser) popOperation() {

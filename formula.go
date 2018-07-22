@@ -1,8 +1,8 @@
 package formulae
 
 import (
-	"fmt"
 	"math"
+	"strings"
 
 	"github.com/aarzilli/golua/lua"
 )
@@ -10,51 +10,58 @@ import (
 type Vars map[string]complex128
 
 func (v Vars) Set(name string, value complex128) {
-	v[name] = value
+	v[strings.ToLower(name)] = value
+}
+
+func (v Vars) Duplicate() Vars {
+	v2 := make(map[string]complex128, len(v))
+	for key, val := range v {
+		v2[key] = val
+	}
+	return v2
+}
+
+var DefaultVars = Vars{
+	"e":   complex(math.E, 0),
+	"pi":  complex(math.Pi, 0),
+	"phi": complex(math.Phi, 0),
 }
 
 ////////////////
 
 type Formula struct {
 	root Node
-	Vars
+	Calc
 }
 
-func NewFormula(root Node) *Formula {
-	vars := Vars{}
-	vars.Set("e", complex(math.E, 0))
-	vars.Set("pi", complex(math.Pi, 0))
-	vars.Set("phi", complex(math.Phi, 0))
-	return &Formula{root: root, Vars: vars}
+func (f *Formula) Compile(vars Vars) error {
+	var err error
+	f.Calc, err = f.root.Compile(vars)
+	return err
 }
 
-func (f *Formula) Calc(x complex128) (complex128, error) {
-	return f.root.Calc(x, f.Vars)
-}
-
-func (f *Formula) Interval(xMin, xStep, xMax float64) ([]float64, []complex128, []error) {
+func (f *Formula) Interval(xMin, xStep, xMax float64) ([]float64, []complex128) {
 	n := int((xMax-xMin)/xStep) + 1
 	xs := make([]float64, n)
 	ys := make([]complex128, n)
 
 	x := xMin
-	var errs []error
 	for i := 0; i < n; i++ {
-		y, err := f.Calc(complex(x, 0))
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%v (x = %v)", err, x))
-			continue
-		}
+		y := f.Calc(complex(x, 0))
 
 		xs[i] = x
 		ys[i] = y
 
 		x += xStep
 	}
-	return xs, ys, errs
+	return xs, ys
 }
 
-func (f *Formula) Compile() (LuaFormula, error) {
+type LuaFormula struct {
+	*lua.State
+}
+
+func (f *Formula) CompileLua() (LuaFormula, error) {
 	L := lua.NewState()
 	L.OpenLibs()
 	L.OpenMath()
@@ -65,10 +72,6 @@ func (f *Formula) Compile() (LuaFormula, error) {
 		return LuaFormula{nil}, err
 	}
 	return LuaFormula{L}, nil
-}
-
-type LuaFormula struct {
-	*lua.State
 }
 
 func (L LuaFormula) Calc(x complex128) (complex128, error) {

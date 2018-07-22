@@ -30,12 +30,14 @@ func TestCalc(t *testing.T) {
 				t.Fatal(formula, errs)
 			}
 
-			f, err := formula.Calc(x)
+			err := formula.Compile(DefaultVars)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if cmplx.Abs(f-test.out) > Epsilon {
-				t.Fatal(f, "!=", test.out)
+
+			y := formula.Calc(x)
+			if cmplx.Abs(y-test.out) > Epsilon {
+				t.Fatal(y, "!=", test.out)
 			}
 		})
 	}
@@ -47,10 +49,9 @@ func TestCalcErr(t *testing.T) {
 		err string
 	}{
 		{"4y", "2: undeclared variable 'y'"},
-		{"3/(5-x)", "2: division by zero"},
+		// {"3/(5-x)", "2: division by zero"},
 	}
 
-	x := 5 + 0i
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
 			formula, errs := Parse(test.in)
@@ -58,7 +59,7 @@ func TestCalcErr(t *testing.T) {
 				t.Fatal(formula, errs)
 			}
 
-			_, err := formula.Calc(x)
+			err := formula.Compile(DefaultVars)
 			if err.Error() != test.err {
 				t.Fatal(err.Error(), "!=", test.err)
 			}
@@ -77,13 +78,14 @@ func BenchmarkCalcNativeGo(b *testing.B) {
 }
 
 func BenchmarkCalcGo(b *testing.B) {
+	_ = formula.Compile(DefaultVars)
 	for i := 0; i < b.N; i++ {
-		y, _ = formula.Calc(x)
+		y = formula.Calc(x)
 	}
 }
 
 func BenchmarkCalcLua(b *testing.B) {
-	compiled, _ := formula.Compile()
+	compiled, _ := formula.CompileLua()
 	defer compiled.Close()
 
 	for i := 0; i < b.N; i++ {

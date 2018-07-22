@@ -7,9 +7,11 @@ import (
 	"github.com/tdewolff/formulae/hash"
 )
 
+type Calc func(complex128) complex128
+
 type Node interface {
 	String() string
-	Calc(complex128, Vars) (complex128, error)
+	Compile(Vars) (Calc, error)
 	Lua() string
 }
 
@@ -25,48 +27,50 @@ func (n *Func) String() string {
 	return fmt.Sprintf("(%v %v)", n.name, n.a)
 }
 
-func (n *Func) Calc(x complex128, vars Vars) (complex128, error) {
-	a, err := n.a.Calc(x, vars)
+func (n *Func) Compile(vars Vars) (Calc, error) {
+	a, err := n.a.Compile(vars)
 	if err != nil {
-		return cmplx.NaN(), err
+		return nil, err
 	}
 
+	var f func(complex128) complex128
 	switch n.name {
 	case hash.Sqrt:
-		return cmplx.Sqrt(a), nil
+		f = cmplx.Sqrt
 	case hash.Sin:
-		return cmplx.Sin(a), nil
+		f = cmplx.Sin
 	case hash.Cos:
-		return cmplx.Cos(a), nil
+		f = cmplx.Cos
 	case hash.Tan:
-		return cmplx.Tan(a), nil
+		f = cmplx.Tan
 	case hash.Arcsin:
-		return cmplx.Asin(a), nil
+		f = cmplx.Asin
 	case hash.Arccos:
-		return cmplx.Acos(a), nil
+		f = cmplx.Acos
 	case hash.Arctan:
-		return cmplx.Atan(a), nil
+		f = cmplx.Atan
 	case hash.Sinh:
-		return cmplx.Sinh(a), nil
+		f = cmplx.Sinh
 	case hash.Cosh:
-		return cmplx.Cosh(a), nil
+		f = cmplx.Cosh
 	case hash.Tanh:
-		return cmplx.Tanh(a), nil
+		f = cmplx.Tanh
 	case hash.Arcsinh:
-		return cmplx.Asinh(a), nil
+		f = cmplx.Asinh
 	case hash.Arccosh:
-		return cmplx.Acosh(a), nil
+		f = cmplx.Acosh
 	case hash.Arctanh:
-		return cmplx.Atanh(a), nil
+		f = cmplx.Atanh
 	case hash.Exp:
-		return cmplx.Exp(a), nil
+		f = cmplx.Exp
 	case hash.Log, hash.Ln:
-		return cmplx.Log(a), nil
+		f = cmplx.Log
 	case hash.Log10:
-		return cmplx.Log10(a), nil
+		f = cmplx.Log10
 	default:
-		return cmplx.NaN(), ParseErrorf(n.pos, "unknown function '%s'", n.name)
+		return nil, ParseErrorf(n.pos, "unknown function '%s'", n.name)
 	}
+	return func(x complex128) complex128 { return f(a(x)) }, nil
 }
 
 func (n *Func) Lua() string {
@@ -86,33 +90,36 @@ func (n *Expr) String() string {
 	return fmt.Sprintf("(%v %v %v)", n.a, n.op, n.b)
 }
 
-func (n *Expr) Calc(x complex128, vars Vars) (complex128, error) {
-	a, err := n.a.Calc(x, vars)
+func (n *Expr) Compile(vars Vars) (Calc, error) {
+	a, err := n.a.Compile(vars)
 	if err != nil {
-		return cmplx.NaN(), err
+		return nil, err
 	}
 
-	b, err := n.b.Calc(x, vars)
+	b, err := n.b.Compile(vars)
 	if err != nil {
-		return cmplx.NaN(), err
+		return nil, err
 	}
 
 	switch n.op {
 	case AddOp:
-		return a + b, nil
+		return func(x complex128) complex128 { return a(x) + b(x) }, nil
 	case SubtractOp:
-		return a - b, nil
+		return func(x complex128) complex128 { return a(x) - b(x) }, nil
 	case MultiplyOp:
-		return a * b, nil
+		return func(x complex128) complex128 { return a(x) * b(x) }, nil
 	case DivideOp:
-		if b == 0 {
-			return cmplx.Inf(), ParseErrorf(n.pos, "division by zero") // TODO: set sign
-		}
-		return a / b, nil
+		return func(x complex128) complex128 {
+			bVal := b(x)
+			if bVal == 0 {
+				return cmplx.Inf()
+			}
+			return a(x) / b(x)
+		}, nil
 	case PowerOp:
-		return cmplx.Pow(a, b), nil
+		return func(x complex128) complex128 { return cmplx.Pow(a(x), b(x)) }, nil
 	default:
-		return cmplx.NaN(), ParseErrorf(n.pos, "unknown operation '%s'", n.op)
+		return nil, ParseErrorf(n.pos, "unknown operation '%s'", n.op)
 	}
 }
 
@@ -132,9 +139,12 @@ func (n *UnaryExpr) String() string {
 	return fmt.Sprintf("(%v %v)", n.op, n.a)
 }
 
-func (n *UnaryExpr) Calc(x complex128, vars Vars) (complex128, error) {
-	a, err := n.a.Calc(x, vars)
-	return -a, err
+func (n *UnaryExpr) Compile(vars Vars) (Calc, error) {
+	a, err := n.a.Compile(vars)
+	if err != nil {
+		return nil, err
+	}
+	return func(x complex128) complex128 { return -a(x) }, nil
 }
 
 func (n *UnaryExpr) Lua() string {
@@ -152,13 +162,13 @@ func (n *Variable) String() string {
 	return fmt.Sprintf("'%s'", n.name)
 }
 
-func (n *Variable) Calc(x complex128, vars Vars) (complex128, error) {
+func (n *Variable) Compile(vars Vars) (Calc, error) {
 	if n.name == "x" {
-		return x, nil
+		return func(x complex128) complex128 { return x }, nil
 	} else if val, ok := vars[n.name]; ok {
-		return val, nil
+		return func(x complex128) complex128 { return val }, nil
 	}
-	return cmplx.NaN(), ParseErrorf(n.pos, "undeclared variable '%s'", n.name)
+	return nil, ParseErrorf(n.pos, "undeclared variable '%s'", n.name)
 }
 
 func (n *Variable) Lua() string {
@@ -179,8 +189,9 @@ func (n *Number) String() string {
 	return fmt.Sprintf("'%v'", n.val)
 }
 
-func (n *Number) Calc(x complex128, vars Vars) (complex128, error) {
-	return n.val, nil
+func (n *Number) Compile(vars Vars) (Calc, error) {
+	val := n.val
+	return func(x complex128) complex128 { return val }, nil
 }
 
 func (n *Number) Lua() string {
