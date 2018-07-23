@@ -59,7 +59,7 @@ type Parser struct {
 	operatorStack []SYToken
 }
 
-func Parse(in string) (*Formula, []error) {
+func Parse(in string) (*Function, []error) {
 	var errs []error
 	l := NewLexer(strings.NewReader(in))
 	p := Parser{}
@@ -135,7 +135,7 @@ LOOP:
 		return nil, []error{fmt.Errorf("some operands remain unparsed")}
 	}
 
-	return &Formula{root: root}, nil
+	return &Function{root: root, Vars: DefaultVars}, nil
 }
 
 func (p *Parser) popOperation() {
