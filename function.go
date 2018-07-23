@@ -29,38 +29,37 @@ var DefaultVars = Vars{
 
 type Function struct {
 	root Node
-    Vars
+    vars Vars
+    buf []complex128
 }
 
-func (f *Function) Calc(x complex128) (complex128, error) {
-    return f.root.Calc(x, f.Vars)
-}
-
-func (f *Function) CalcN(xs []complex128) ([]complex128, error) {
+func (f *Function) Calc(xs []complex128) ([]complex128, error) {
     ys := make([]complex128, len(xs))
     copy(ys, xs)
-    return f.root.CalcN(ys, f.Vars)
+
+    if cap(f.buf) < len(xs) {
+        f.buf = make([]complex128, len(xs))
+    }
+    f.buf = f.buf[:len(xs)]
+
+    return f.root.Calc(xs, ys)
 }
 
-func (f *Function) Interval(xMin, xStep, xMax float64) ([]float64, []complex128, []error) {
-    var errs []error
-
+func (f *Function) Interval(xMin, xStep, xMax float64) ([]float64, []complex128, error) {
 	n := int((xMax-xMin)/xStep) + 1
-	xs := make([]float64, n)
-	ys := make([]complex128, n)
+	xsReal := make([]float64, n)
+	xs := make([]complex128, n)
 
 	x := xMin
-	for i := 0; i < n; i++ {
-		y, err := f.Calc(complex(x, 0))
-        if err != nil {
-            errs = append(errs, err)
-            continue
-        }
+    for i := 0; i < n; i++ {
+        xsReal[i] = x
+        xs[i] = complex(x, 0)
+        x += xStep
+    }
 
-		xs[i] = x
-		ys[i] = y
-
-		x += xStep
-	}
-	return xs, ys, errs
+    ys, err := f.Calc(xs)
+    if err != nil {
+        return nil, nil, err
+    }
+	return xsReal, ys, nil
 }

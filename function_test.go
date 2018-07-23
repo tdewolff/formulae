@@ -22,7 +22,7 @@ func TestCalc(t *testing.T) {
 		{"i", 1i},
 	}
 
-	x := 5 + 0i
+	xs := []complex128{5 + 0i}
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
 			function, errs := Parse(test.in)
@@ -30,12 +30,12 @@ func TestCalc(t *testing.T) {
 				t.Fatal(function, errs)
 			}
 
-			y, err := function.Calc(x)
+			ys, err := function.Calc(xs)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if cmplx.Abs(y-test.out) > Epsilon {
-				t.Fatal(y, "!=", test.out)
+			if cmplx.Abs(ys[0]-test.out) > Epsilon {
+				t.Fatal(ys[0], "!=", test.out)
 			}
 		})
 	}
@@ -53,7 +53,7 @@ func TestCalcN(t *testing.T) {
         xs[i] = complex(float64(i), 0)
     }
 
-    ys, err := function.CalcN(xs)
+    ys, err := function.Calc(xs)
     if err != nil {
         t.Fatal(err)
     }
@@ -70,10 +70,10 @@ func TestCalcErr(t *testing.T) {
 		err string
 	}{
 		{"4y", "2: undeclared variable 'y'"},
-		{"3/(5-x)", "2: division by zero"},
+		// {"3/(5-x)", "2: division by zero"},
 	}
 
-    x := 5+0i
+	xs := []complex128{5 + 0i}
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
 			function, errs := Parse(test.in)
@@ -81,8 +81,10 @@ func TestCalcErr(t *testing.T) {
 				t.Fatal(function, errs)
 			}
 
-			_, err := function.Calc(x)
-			if err.Error() != test.err {
+			_, err := function.Calc(xs)
+            if err == nil {
+				t.Fatal("err !=", test.err)
+            } else if err.Error() != test.err {
 				t.Fatal(err.Error(), "!=", test.err)
 			}
 		})
@@ -91,35 +93,27 @@ func TestCalcErr(t *testing.T) {
 
 var function, _ = Parse("sin(x)^2+1/x+0.001x^3")
 var N = 100
-var x []complex128
-var y []complex128
+var xs []complex128
+var ys []complex128
 
 func init() {
-    x = make([]complex128, N)
-    y = make([]complex128, N)
+    xs = make([]complex128, N)
+    ys = make([]complex128, N)
     for j := 0; j < N; j++ {
-        x[j] = complex(float64(j)+1.0, 0)
+        xs[j] = complex(float64(j)+1.0, 0)
     }
 }
 
 func BenchmarkCalcNative(b *testing.B) {
 	for i := 0; i < b.N; i++ {
         for j := 0; j < N; j++ {
-		    y[j] = cmplx.Pow(cmplx.Sin(x[j]), 2) + (1 / x[j]) + 0.001*cmplx.Pow(x[j], 3)
+		    ys[j] = cmplx.Pow(cmplx.Sin(xs[j]), 2) + (1 / xs[j]) + 0.001*cmplx.Pow(xs[j], 3)
         }
 	}
 }
 
 func BenchmarkCalc(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-        for j := 0; j < N; j++ {
-		    y[j], _ = function.Calc(x[j])
-        }
-	}
-}
-
-func BenchmarkCalcN(b *testing.B) {
     for i := 0; i < b.N; i++ {
-        y, _ = function.CalcN(x)
+        ys, _ = function.Calc(xs)
     }
 }
