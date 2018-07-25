@@ -9,7 +9,7 @@ import (
 
 type Node interface {
 	String() string
-	Calc([]complex128, []complex128) ([]complex128, error)
+	Calc(complex128, Vars) (complex128, error)
 }
 
 ////////////////
@@ -24,54 +24,50 @@ func (n *Func) String() string {
 	return fmt.Sprintf("(%v %v)", n.name, n.a)
 }
 
-func (n *Func) Calc(xs, ys []complex128) ([]complex128, error) {
-	var f func(complex128) complex128
-	switch n.name {
-	case hash.Sqrt:
-		f = cmplx.Sqrt
-	case hash.Sin:
-		f = cmplx.Sin
-	case hash.Cos:
-		f = cmplx.Cos
-	case hash.Tan:
-		f = cmplx.Tan
-	case hash.Arcsin:
-		f = cmplx.Asin
-	case hash.Arccos:
-		f = cmplx.Acos
-	case hash.Arctan:
-		f = cmplx.Atan
-	case hash.Sinh:
-		f = cmplx.Sinh
-	case hash.Cosh:
-		f = cmplx.Cosh
-	case hash.Tanh:
-		f = cmplx.Tanh
-	case hash.Arcsinh:
-		f = cmplx.Asinh
-	case hash.Arccosh:
-		f = cmplx.Acosh
-	case hash.Arctanh:
-		f = cmplx.Atanh
-	case hash.Exp:
-		f = cmplx.Exp
-	case hash.Log, hash.Ln:
-		f = cmplx.Log
-	case hash.Log10:
-		f = cmplx.Log10
-	default:
-		return nil, ParseErrorf(n.pos, "unknown function '%s'", n.name)
-	}
-
-    ys, err := n.a.Calc(xs, ys)
+func (n *Func) Calc(x complex128, vars Vars) (complex128, error) {
+    y, err := n.a.Calc(x, vars)
     if err != nil {
-        return nil, err
+        return cmplx.NaN(), err
     }
 
-    for i := range ys {
-        ys[i] = f(ys[i])
+    var f func(complex128) complex128
+    switch n.name {
+    case hash.Sqrt:
+        f = cmplx.Sqrt
+    case hash.Sin:
+        f = cmplx.Sin
+    case hash.Cos:
+        f = cmplx.Cos
+    case hash.Tan:
+        f = cmplx.Tan
+    case hash.Arcsin:
+        f = cmplx.Asin
+    case hash.Arccos:
+        f = cmplx.Acos
+    case hash.Arctan:
+        f = cmplx.Atan
+    case hash.Sinh:
+        f = cmplx.Sinh
+    case hash.Cosh:
+        f = cmplx.Cosh
+    case hash.Tanh:
+        f = cmplx.Tanh
+    case hash.Arcsinh:
+        f = cmplx.Asinh
+    case hash.Arccosh:
+        f = cmplx.Acosh
+    case hash.Arctanh:
+        f = cmplx.Atanh
+    case hash.Exp:
+        f = cmplx.Exp
+    case hash.Log, hash.Ln:
+        f = cmplx.Log
+    case hash.Log10:
+        f = cmplx.Log10
+    default:
+        return cmplx.NaN(), ParseErrorf(n.pos, "unknown function '%s'", n.name)
     }
-    return ys, nil
+    return f(y), nil
 }
 
 ////////////////
@@ -81,56 +77,42 @@ type Expr struct {
 	op  Operator
 	a   Node
 	b   Node
-
-    buf *[]complex128
 }
 
 func (n *Expr) String() string {
 	return fmt.Sprintf("(%v %v %v)", n.a, n.op, n.b)
 }
 
-func (n *Expr) Calc(xs, ys []complex128) ([]complex128, error) {
-	as, err := n.a.Calc(xs, ys)
+func (n *Expr) Calc(x complex128, vars Vars) (complex128, error) {
+	a, err := n.a.Calc(x, vars)
 	if err != nil {
-		return nil, err
+		return cmplx.NaN(), err
 	}
 
-    copy(*n.buf, xs)
-    ys, *n.buf = *n.buf, ys
-	bs, err := n.b.Calc(xs, ys)
+	b, err := n.b.Calc(x, vars)
 	if err != nil {
-		return nil, err
+		return cmplx.NaN(), err
 	}
 
+    var y complex128
 	switch n.op {
 	case AddOp:
-        for i := range ys {
-            ys[i] = as[i] + bs[i]
-        }
+        y = a + b
 	case SubtractOp:
-        for i := range ys {
-            ys[i] = as[i] - bs[i]
-        }
+        y = a - b
 	case MultiplyOp:
-        for i := range ys {
-            ys[i] = as[i] * bs[i]
-        }
+        y = a * b
 	case DivideOp:
-        for i := range ys {
-            if bs[i] == 0 {
-                ys[i] = cmplx.NaN()
-                continue
-            }
-            ys[i] = as[i] / bs[i]
+        if b == 0 {
+            return cmplx.NaN(), ParseErrorf(n.pos, "division by zero")
         }
+        y = a / b
 	case PowerOp:
-        for i := range ys {
-            ys[i] = cmplx.Pow(as[i], bs[i])
-        }
+        y = cmplx.Pow(a, b)
 	default:
-		return nil, ParseErrorf(n.pos, "unknown operation '%s'", n.op)
+		return cmplx.NaN(), ParseErrorf(n.pos, "unknown operation '%s'", n.op)
 	}
-    return ys, nil
+    return y, nil
 }
 
 ////////////////
@@ -145,17 +127,12 @@ func (n *UnaryExpr) String() string {
 	return fmt.Sprintf("(%v %v)", n.op, n.a)
 }
 
-func (n *UnaryExpr) Calc(xs, ys []complex128) ([]complex128, error) {
-    var err error
-	ys, err = n.a.Calc(xs, ys)
+func (n *UnaryExpr) Calc(x complex128, vars Vars) (complex128, error) {
+	y, err := n.a.Calc(x, vars)
     if err != nil {
-        return nil, err
+        return cmplx.NaN(), err
     }
-
-    for i := range ys {
-        ys[i] = -ys[i]
-    }
-    return ys, nil
+    return -y, nil
 }
 
 ////////////////
@@ -163,23 +140,17 @@ func (n *UnaryExpr) Calc(xs, ys []complex128) ([]complex128, error) {
 type Variable struct {
 	pos  int
 	name string
-
-    vars *Vars
 }
 
 func (n *Variable) String() string {
 	return fmt.Sprintf("'%s'", n.name)
 }
 
-func (n *Variable) Calc(xs, ys []complex128) ([]complex128, error) {
-    if _, ok := (*n.vars)[n.name]; !ok {
-        return nil, ParseErrorf(n.pos, "undeclared variable '%s'", n.name)
+func (n *Variable) Calc(x complex128, vars Vars) (complex128, error) {
+    if _, ok := vars[n.name]; !ok {
+        return cmplx.NaN(), ParseErrorf(n.pos, "undefined variable '%s'", n.name)
     }
-    val := (*n.vars)[n.name]
-    for i := range ys {
-        ys[i] = val
-    }
-    return ys, nil
+    return vars[n.name], nil
 }
 
 ////////////////
@@ -192,8 +163,8 @@ func (n *Argument) String() string {
 	return fmt.Sprintf("'x'")
 }
 
-func (n *Argument) Calc(xs, ys []complex128) ([]complex128, error) {
-    return xs, nil
+func (n *Argument) Calc(x complex128, vars Vars) (complex128, error) {
+    return x, nil
 }
 
 ////////////////
@@ -210,9 +181,6 @@ func (n *Number) String() string {
 	return fmt.Sprintf("'%v'", n.val)
 }
 
-func (n *Number) Calc(xs, ys []complex128) ([]complex128, error) {
-    for i := range ys {
-        ys[i] = n.val
-    }
-    return ys, nil
+func (n *Number) Calc(x complex128, vars Vars) (complex128, error) {
+    return n.val, nil
 }

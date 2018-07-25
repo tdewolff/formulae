@@ -22,7 +22,7 @@ func TestCalc(t *testing.T) {
 		{"i", 1i},
 	}
 
-	xs := []complex128{5 + 0i}
+	x := 5 + 0i
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
 			function, errs := Parse(test.in)
@@ -30,38 +30,15 @@ func TestCalc(t *testing.T) {
 				t.Fatal(function, errs)
 			}
 
-			ys, err := function.Calc(xs)
+			y, err := function.Calc(x)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if cmplx.Abs(ys[0]-test.out) > Epsilon {
-				t.Fatal(ys[0], "!=", test.out)
+			if cmplx.Abs(y-test.out) > Epsilon {
+				t.Fatal(y, "!=", test.out)
 			}
 		})
 	}
-}
-
-func TestCalcN(t *testing.T) {
-    function, errs := Parse("x+1")
-    if len(errs) > 0 {
-        t.Fatal(function, errs)
-    }
-
-    N := 100
-    xs := make([]complex128, N)
-    for i := range xs {
-        xs[i] = complex(float64(i), 0)
-    }
-
-    ys, err := function.Calc(xs)
-    if err != nil {
-        t.Fatal(err)
-    }
-
-    y := ys[len(ys)-1]
-    if real(y) != 100.0 {
-	    t.Fatal(y, "!= 100.0")
-    }
 }
 
 func TestCalcErr(t *testing.T) {
@@ -69,11 +46,11 @@ func TestCalcErr(t *testing.T) {
 		in  string
 		err string
 	}{
-		{"4y", "2: undeclared variable 'y'"},
-		// {"3/(5-x)", "2: division by zero"},
+		{"4y", "undefined variable 'y'"},
+		{"3/(5-x)", "division by zero"},
 	}
 
-	xs := []complex128{5 + 0i}
+	x := 5 + 0i
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
 			function, errs := Parse(test.in)
@@ -81,9 +58,9 @@ func TestCalcErr(t *testing.T) {
 				t.Fatal(function, errs)
 			}
 
-			_, err := function.Calc(xs)
+			_, err := function.Calc(x)
             if err == nil {
-				t.Fatal("err !=", test.err)
+				t.Fatal("nil !=", test.err)
             } else if err.Error() != test.err {
 				t.Fatal(err.Error(), "!=", test.err)
 			}
@@ -114,6 +91,8 @@ func BenchmarkCalcNative(b *testing.B) {
 
 func BenchmarkCalc(b *testing.B) {
     for i := 0; i < b.N; i++ {
-        ys, _ = function.Calc(xs)
+        for i, x := range xs {
+            ys[i], _ = function.Calc(x)
+        }
     }
 }

@@ -40,15 +40,19 @@ var OpRightAssoc = map[Operator]bool{
 
 type ParseError struct {
 	pos int
-	err string
+	msg string
 }
 
-func (pe *ParseError) Error() string {
-	return fmt.Sprintf("%d: %s", pe.pos, pe.err)
+func (pe ParseError) Pos() int {
+    return pe.pos
 }
 
-func ParseErrorf(pos int, format string, args ...interface{}) *ParseError {
-	return &ParseError{
+func (pe ParseError) Error() string {
+	return pe.msg
+}
+
+func ParseErrorf(pos int, format string, args ...interface{}) ParseError {
+	return ParseError{
 		pos,
 		fmt.Sprintf(format, args...),
 	}
@@ -127,9 +131,7 @@ LOOP:
 		return nil, []error{fmt.Errorf("empty formula")}
 	}
 
-    var err error
-    f := &Function{vars: DefaultVars}
-	f.root, err = p.popNode(f)
+	root, err := p.popNode()
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -137,7 +139,8 @@ LOOP:
 		return nil, []error{fmt.Errorf("some operands remain unparsed")}
 	}
 
-	return f, nil
+    vars := DefaultVars.Duplicate()
+	return &Function{root: root, Vars: vars}, nil
 }
 
 func (p *Parser) popOperation() {
@@ -147,7 +150,7 @@ func (p *Parser) popOperation() {
 
 var ErrNoOperand = fmt.Errorf("no operand")
 
-func (p *Parser) popNode(f *Function) (Node, error) {
+func (p *Parser) popNode() (Node, error) {
 	if len(p.output) == 0 {
 		return nil, ErrNoOperand
 	}
@@ -192,39 +195,38 @@ func (p *Parser) popNode(f *Function) (Node, error) {
 				}
 			}
 		}
-		return &Number{tok.pos, complex(fr, fi)}, nil
+		return &Number{pos: tok.pos, val: complex(fr, fi)}, nil
 	case IdentifierToken:
         if len(tok.data) == 1 && tok.data[0] == 'x' {
             return &Argument{tok.pos}, nil
         } else {
-            s := string(tok.data)
-		    return &Variable{pos: tok.pos, name: s, vars: &f.vars}, nil
+		    return &Variable{pos: tok.pos, name: string(tok.data)}, nil
         }
 	case OperatorToken:
 		switch tok.op {
 		case FuncOp:
-			n, _ := p.popNode(f)
-			return &Func{tok.pos, tok.function, n}, nil
+			a, _ := p.popNode()
+			return &Func{pos: tok.pos, name: tok.function, a: a}, nil
 		case OpenOp:
-			return p.popNode(f)
+			return p.popNode()
 		case MinusOp:
-			n, _ := p.popNode(f)
-			return &UnaryExpr{tok.pos, tok.op, n}, nil
+			a, _ := p.popNode()
+			return &UnaryExpr{pos: tok.pos, op: tok.op, a: a}, nil
 		default:
-			y, err := p.popNode(f)
+			b, err := p.popNode()
 			if err != nil && err != ErrNoOperand {
 				return nil, err
 			}
-			x, err := p.popNode(f)
+			a, err := p.popNode()
 			if err != nil && err != ErrNoOperand {
 				return nil, err
 			}
-			if x == nil || y == nil {
+			if a == nil || b == nil {
 				return nil, ParseErrorf(tok.pos, "operator has no operands")
 			}
-			return &Expr{pos: tok.pos, op: tok.op, a: x, b: y, buf: &f.buf}, nil
+			return &Expr{pos: tok.pos, op: tok.op, a: a, b: b}, nil
 		}
 	default:
-		panic("bad token type: " + tok.tt.String())
+		panic("bad token type '" + tok.tt.String() + "'")
 	}
 }

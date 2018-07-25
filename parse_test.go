@@ -43,8 +43,8 @@ func TestParseErr(t *testing.T) {
 		err string
 	}{
 		{"", "empty formula"},
-		{"1++2", "2: operator has no operands"},
-		{"4&4", "2: bad input"},
+		{"1++2", "operator has no operands"},
+		{"4&4", "bad input"},
 	}
 
 	for _, test := range tests {

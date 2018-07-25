@@ -2,13 +2,12 @@ package formulae
 
 import (
 	"math"
-	"strings"
 )
 
 type Vars map[string]complex128
 
 func (v Vars) Set(name string, value complex128) {
-	v[strings.ToLower(name)] = value
+	v[name] = value
 }
 
 func (v Vars) Duplicate() Vars {
@@ -29,37 +28,28 @@ var DefaultVars = Vars{
 
 type Function struct {
 	root Node
-    vars Vars
-    buf []complex128
+    Vars
 }
 
-func (f *Function) Calc(xs []complex128) ([]complex128, error) {
-    ys := make([]complex128, len(xs))
-    copy(ys, xs)
-
-    if cap(f.buf) < len(xs) {
-        f.buf = make([]complex128, len(xs))
-    }
-    f.buf = f.buf[:len(xs)]
-
-    return f.root.Calc(xs, ys)
+func (f *Function) Calc(x complex128) (complex128, error) {
+    return f.root.Calc(x, f.Vars)
 }
 
-func (f *Function) Interval(xMin, xStep, xMax float64) ([]float64, []complex128, error) {
+func (f *Function) Interval(xMin, xStep, xMax float64) ([]float64, []complex128, []error) {
 	n := int((xMax-xMin)/xStep) + 1
-	xsReal := make([]float64, n)
-	xs := make([]complex128, n)
+	xs := make([]float64, n)
+	ys := make([]complex128, n)
 
 	x := xMin
+    var err error
+    var errs []error
     for i := 0; i < n; i++ {
-        xsReal[i] = x
-        xs[i] = complex(x, 0)
+        xs[i] = x
+        ys[i], err = f.Calc(complex(x, 0))
+        if err != nil {
+            errs = append(errs, err)
+        }
         x += xStep
     }
-
-    ys, err := f.Calc(xs)
-    if err != nil {
-        return nil, nil, err
-    }
-	return xsReal, ys, nil
+	return xs, ys, errs
 }
