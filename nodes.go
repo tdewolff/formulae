@@ -160,7 +160,7 @@ type Argument struct {
 }
 
 func (n *Argument) String() string {
-	return fmt.Sprintf("'x'")
+	return "'x'"
 }
 
 func (n *Argument) Calc(x complex128, vars Vars) (complex128, error) {

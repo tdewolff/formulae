@@ -198,7 +198,7 @@ func (p *Parser) popNode() (Node, error) {
 		return &Number{pos: tok.pos, val: complex(fr, fi)}, nil
 	case IdentifierToken:
         if len(tok.data) == 1 && tok.data[0] == 'x' {
-            return &Argument{tok.pos}, nil
+            return &Argument{pos: tok.pos}, nil
         } else {
 		    return &Variable{pos: tok.pos, name: string(tok.data)}, nil
         }

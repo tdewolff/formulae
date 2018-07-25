@@ -2,6 +2,7 @@ package formulae
 
 import (
 	"math"
+    "fmt"
 )
 
 type Vars map[string]complex128
@@ -29,6 +30,10 @@ var DefaultVars = Vars{
 type Function struct {
 	root Node
     Vars
+}
+
+func (f *Function) LaTeX() string {
+    return fmt.Sprintf("$%s$", f.root)
 }
 
 func (f *Function) Calc(x complex128) (complex128, error) {

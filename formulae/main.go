@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+    "fmt"
 
 	"github.com/tdewolff/formulae"
 	"gonum.org/v1/plot"
@@ -10,18 +11,17 @@ import (
 )
 
 func main() {
-	in := "2+x"
+	in := "sin(x)^2+1/x+0.001x^(3+x)"
 	formula, errs := formulae.Parse(in)
 	if len(errs) > 0 {
 		log.Fatal(errs)
 	}
+    fmt.Println(formula.LaTeX())
 
-	err := formula.Compile(formulae.DefaultVars)
-	if err != nil {
-		log.Fatal(err)
+	xs, ys, errs := formula.Interval(0.0, 0.1, 5.0)
+	if len(errs) > 0 {
+		log.Fatal(errs)
 	}
-
-	xs, ys := formula.Interval(0.0, 0.1, 5.0)
 
 	xys := make(plotter.XYs, len(xs))
 	for i := range xs {
