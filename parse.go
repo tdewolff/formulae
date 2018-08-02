@@ -105,8 +105,8 @@ LOOP:
 					break LOOP
 				} else if n > 1 && p.operatorStack[n-2].op == FuncOp {
 					p.popOperation()
-					p.popOperation()
 				}
+				p.popOperation() // pop OpenOp
 			default:
 				for n := len(p.operatorStack); n > 0; n-- {
 					stack := p.operatorStack[n-1].op

@@ -32,8 +32,12 @@ type Function struct {
     Vars
 }
 
+func (f *Function) String() string {
+    return f.root.String()
+}
+
 func (f *Function) LaTeX() string {
-    return fmt.Sprintf("$%s$", f.root)
+    return fmt.Sprintf("f(x) = %s", f.root.LaTeX())
 }
 
 func (f *Function) Calc(x complex128) (complex128, error) {

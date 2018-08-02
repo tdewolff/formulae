@@ -3,6 +3,7 @@ package main
 import (
 	"log"
     "fmt"
+    "os"
 
 	"github.com/tdewolff/formulae"
 	"gonum.org/v1/plot"
@@ -11,14 +12,21 @@ import (
 )
 
 func main() {
-	in := "sin(x)^2+1/x+0.001x^(3+x)"
+	in := "sin(cos(x))^2+1/(x*2)+0.001x^(3+x)"
 	formula, errs := formulae.Parse(in)
 	if len(errs) > 0 {
 		log.Fatal(errs)
 	}
+
+    fmt.Println(formula.String())
     fmt.Println(formula.LaTeX())
 
-	xs, ys, errs := formula.Interval(0.0, 0.1, 5.0)
+    err := writeHTML("math.html", formula.LaTeX())
+    if err != nil {
+        log.Fatal(err)
+    }
+
+	xs, ys, errs := formula.Interval(0.1, 0.1, 5.0)
 	if len(errs) > 0 {
 		log.Fatal(errs)
 	}
@@ -54,4 +62,22 @@ func main() {
 	if err := p.Save(4*vg.Inch, 4*vg.Inch, "formula.png"); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func writeHTML(filename, latex string) error {
+    f, err := os.Create(filename)
+    if err != nil {
+        return err
+    }
+    fmt.Fprintf(f, `<!DOCTYPE html>
+<html>
+<head>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+</head>
+<body>
+    <p>$$%s$$</p>
+</body>
+</html>
+`, latex)
+    return f.Close()
 }
