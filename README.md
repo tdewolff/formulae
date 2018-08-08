@@ -1,6 +1,6 @@
 # Formulae <a name="formulae"></a> [![Build Status](https://travis-ci.org/tdewolff/formulae.svg?branch=master)](https://travis-ci.org/tdewolff/formulae) [![GoDoc](http://godoc.org/github.com/tdewolff/formulae?status.svg)](http://godoc.org/github.com/tdewolff/formulae)
 
-**[Online demo](http://go.tacodewolff.nl/formulae) if you need to draw formulae *now*.**
+**[Online demo](https://go.tacodewolff.nl/formulae) if you need to draw formulae *now*.**
 
 ---
 
