@@ -252,7 +252,7 @@ type Func struct {
 }
 
 func (n *Func) String() string {
-	return fmt.Sprintf("(%v %v)", n.name, n.a)
+	return fmt.Sprintf("%v(%v)", n.name, n.a)
 }
 
 func (n *Func) LaTeX() string {
@@ -500,19 +500,28 @@ type Expr struct {
 }
 
 func (n *Expr) String() string {
-	return fmt.Sprintf("(%v %v %v)", n.l, n.op, n.r)
+	l := n.l.String()
+	if lExpr, ok := n.l.(*Expr); ok && (OpPrec[n.op] > OpPrec[lExpr.op] || OpRightAssoc[n.op] && OpPrec[n.op] == OpPrec[lExpr.op]) {
+		l = "(" + l + ")"
+	}
+
+	r := n.r.String()
+	if rExpr, ok := n.r.(*Expr); ok && (OpPrec[n.op] > OpPrec[rExpr.op] || !OpRightAssoc[n.op] && OpPrec[n.op] == OpPrec[rExpr.op] && n.op != rExpr.op) {
+		r = "(" + r + ")"
+	}
+	return fmt.Sprintf("%s%v%s", l, n.op, r)
 }
 
 func (n *Expr) LaTeX() string {
 	l := n.l.LaTeX()
-	if lExpr, ok := n.l.(*Expr); ok && OpPrec[n.op] > OpPrec[lExpr.op] {
+	if lExpr, ok := n.l.(*Expr); ok && (OpPrec[n.op] > OpPrec[lExpr.op] || OpRightAssoc[n.op] && OpPrec[n.op] == OpPrec[lExpr.op]) {
 		l = "\\left(" + l + "\\right)"
 	}
 
 	r := n.r.LaTeX()
 	if n.op == PowerOp {
 		r = "{" + r + "}"
-	} else if rExpr, ok := n.r.(*Expr); ok && OpPrec[n.op] > OpPrec[rExpr.op] {
+	} else if rExpr, ok := n.r.(*Expr); ok && (OpPrec[n.op] > OpPrec[rExpr.op] || !OpRightAssoc[n.op] && OpPrec[n.op] == OpPrec[rExpr.op] && n.op != rExpr.op) {
 		r = "\\left(" + r + "\\right)"
 	}
 
@@ -660,7 +669,10 @@ type UnaryExpr struct {
 }
 
 func (n *UnaryExpr) String() string {
-	return fmt.Sprintf("(%v %v)", n.op, n.a)
+	if nodeIsGroup(n.a) {
+		return fmt.Sprintf("%v(%v)", n.op, n.a)
+	}
+	return fmt.Sprintf("%v%v", n.op, n.a)
 }
 
 func (n *UnaryExpr) LaTeX() string {
@@ -694,7 +706,7 @@ type Variable struct {
 }
 
 func (n *Variable) String() string {
-	return fmt.Sprintf("'%s'", n.name)
+	return fmt.Sprintf("%s", n.name)
 }
 
 func (n *Variable) LaTeX() string {
@@ -707,11 +719,16 @@ func (n *Variable) Equal(iother Node) bool {
 }
 
 func (n *Variable) Derivative() Node {
+	if n.name == "x" {
+		return OneNode
+	}
 	return ZeroNode
 }
 
 func (n *Variable) Calc(x complex128, vars Vars) (complex128, error) {
-	if _, ok := vars[n.name]; !ok {
+	if n.name == "x" {
+		return x, nil
+	} else if _, ok := vars[n.name]; !ok {
 		return cmplx.NaN(), fmt.Errorf("undefined variable '%s'", n.name)
 	}
 	return vars[n.name], nil
@@ -725,9 +742,9 @@ type Number struct {
 
 func (n *Number) String() string {
 	if imag(n.val) == 0 {
-		return fmt.Sprintf("'%v'", real(n.val))
+		return fmt.Sprintf("%v", real(n.val))
 	}
-	return fmt.Sprintf("'%v'", n.val)
+	return fmt.Sprintf("%v", n.val)
 }
 
 func (n *Number) LaTeX() string {
@@ -748,30 +765,4 @@ func (n *Number) Derivative() Node {
 
 func (n *Number) Calc(x complex128, vars Vars) (complex128, error) {
 	return n.val, nil
-}
-
-////////////////
-
-type Argument struct {
-}
-
-func (n *Argument) String() string {
-	return "'x'"
-}
-
-func (n *Argument) LaTeX() string {
-	return "x"
-}
-
-func (n *Argument) Equal(iother Node) bool {
-	_, ok := iother.(*Argument)
-	return ok
-}
-
-func (n *Argument) Derivative() Node {
-	return OneNode
-}
-
-func (n *Argument) Calc(x complex128, vars Vars) (complex128, error) {
-	return x, nil
 }
