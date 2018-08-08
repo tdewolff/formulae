@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"log"
 	"os"
 
@@ -12,24 +13,24 @@ import (
 )
 
 func main() {
-	in := "sin(cos(x))^2+1/(x*2)+0.001x^(3+x)"
-	formula, errs := formulae.Parse(in)
+	// Parse formula
+	in := "sin(cos(x))^2+1/x-1"
+	f, errs := formulae.Parse(in)
 	if len(errs) > 0 {
 		log.Fatal(errs)
 	}
+	df := f.Derivative()
 
-	dformula := formula.Derivative()
-
-	err := writeHTML("math.html", formula.LaTeX(), dformula.LaTeX())
+	err := writeHTML("math.html", f.LaTeX(), df.LaTeX())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	xs, ys, errs := formula.Interval(0.1, 0.1, 5.0)
+	// Calculate function
+	xs, ys, errs := f.Interval(0.5, 0.01, 5.0)
 	if len(errs) > 0 {
 		log.Fatal(errs)
 	}
-
 	xys := make(plotter.XYs, len(xs))
 	for i := range xs {
 		xys[i].X = xs[i]
@@ -40,25 +41,45 @@ func main() {
 		ymin = 0
 	}
 
+	// Calculate function derivative
+	xs2, ys2, errs := df.Interval(0.5, 0.01, 5.0)
+	if len(errs) > 0 {
+		log.Fatal(errs)
+	}
+	xys2 := make(plotter.XYs, len(xs2))
+	for i := range xs2 {
+		xys2[i].X = xs2[i]
+		xys2[i].Y = real(ys2[i])
+	}
+
+	// Plot functions
 	p, err := plot.New()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	p.Title.Text = "Formulae"
-	p.X.Label.Text = "X"
-	p.Y.Label.Text = "Y"
+	p.X.Label.Text = "x"
+	p.Y.Label.Text = "y"
 	p.Y.Min = ymin
 
 	line, err := plotter.NewLine(xys)
 	if err != nil {
 		log.Fatal(err)
 	}
+	line2, err := plotter.NewLine(xys2)
+	if err != nil {
+		log.Fatal(err)
+	}
+	line2.LineStyle.Color = color.Gray{192}
 
+	p.Add(plotter.NewGrid())
 	p.Add(line)
-	p.Legend.Add(in, line)
+	p.Add(line2)
+	p.Legend.Add("f", line)
+	p.Legend.Add("df/dx", line2)
 
-	if err := p.Save(4*vg.Inch, 4*vg.Inch, "formula.png"); err != nil {
+	if err := p.Save(8*vg.Inch, 4*vg.Inch, "formula.png"); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -78,7 +99,8 @@ func writeHTML(filename string, latex ...string) error {
 	for _, x := range latex {
 		fmt.Fprintf(f, "    <p>$$%s$$</p>\n", x)
 	}
-	fmt.Fprintf(f, `</body>
+	fmt.Fprintf(f, `<p style="text-align:center;"><img src="formula.png"></p>
+</body>
 </html>
 `)
 	return f.Close()
