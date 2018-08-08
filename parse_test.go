@@ -28,12 +28,12 @@ func TestParse(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.in, func(t *testing.T) {
-			formula, errs := Parse(test.in)
+			f, errs := Parse(test.in)
 			if len(errs) > 0 {
-				t.Fatal(formula, errs)
+				t.Fatal(f, errs)
 			}
-			if formula.root.String() != test.out {
-				t.Fatal(formula.root.String(), "!=", test.out)
+			if f.root.String() != test.out {
+				t.Fatal(f.root.String(), "!=", test.out)
 			}
 		})
 	}

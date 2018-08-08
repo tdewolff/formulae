@@ -10,7 +10,74 @@ import (
 type Node interface {
 	String() string
     LaTeX() string
+    Equal(Node) bool
 	Calc(complex128, Vars) (complex128, error)
+}
+
+var ZeroNode = &Number{val: 0+0i}
+var OneNode = &Number{val: 1+0i}
+var MinusOneNode = &Number{val: -1+0i}
+
+func Optimize(in Node) Node {
+    switch n := in.(type) {
+    case *Expr:
+        n.l = Optimize(n.l)
+        n.r = Optimize(n.r)
+        switch n.op {
+        case AddOp:
+            if n.l.Equal(ZeroNode) {
+                return n.r
+            } else if n.r.Equal(ZeroNode) {
+                return n.l
+            }
+        case SubtractOp:
+            if n.l.Equal(ZeroNode) {
+                return Optimize(&UnaryExpr{op: MinusOp, a: n.r})
+            } else if n.r.Equal(ZeroNode) {
+                return n.l
+            } else if rNumber, ok := n.r.(*Number); ok && real(rNumber.val) < 0.0 {
+                return Optimize(&Expr{op: AddOp, l: n.l, r: &Number{val: -rNumber.val}})
+            }
+        case MultiplyOp:
+            if n.l.Equal(ZeroNode) || n.r.Equal(ZeroNode) {
+                return ZeroNode
+            } else if n.l.Equal(OneNode) {
+                return n.r
+            } else if n.r.Equal(OneNode) {
+                return n.l
+            } else if n.l.Equal(MinusOneNode) {
+                return Optimize(&UnaryExpr{op: MinusOp, a: n.r})
+            } else if n.r.Equal(MinusOneNode) {
+                return Optimize(&UnaryExpr{op: MinusOp, a: n.l})
+            }
+        case DivideOp:
+            if n.r.Equal(OneNode) {
+                return n.l
+            } else if n.r.Equal(MinusOneNode) {
+                return Optimize(&UnaryExpr{op: MinusOp, a: n.l})
+            }
+        case PowerOp:
+            if n.l.Equal(ZeroNode) {
+                return ZeroNode
+            } else if n.l.Equal(OneNode) || n.r.Equal(ZeroNode) {
+                return OneNode
+            } else if n.r.Equal(OneNode) {
+                return n.l
+            } else if n.r.Equal(MinusOneNode) {
+                return Optimize(&Expr{op: DivideOp, l: OneNode, r: n.l})
+            }
+        }
+    case *UnaryExpr:
+        n.a = Optimize(n.a)
+        if n.op == MinusOp {
+            if aNumber, ok := n.a.(*Number); ok {
+                return &Number{val: -aNumber.val}
+            } else if aUnaryExpr, ok := n.a.(*UnaryExpr); ok && aUnaryExpr.op == MinusOp {
+                return aUnaryExpr.a
+            }
+        }
+    }
+    return in
 }
 
 func nodeIsGroup(n Node) bool {
@@ -21,7 +88,6 @@ func nodeIsGroup(n Node) bool {
 ////////////////
 
 type Func struct {
-	pos  int
 	name hash.Hash
 	a    Node
 }
@@ -35,6 +101,24 @@ func (n *Func) LaTeX() string {
 	    return fmt.Sprintf("\\%v(%s)", n.name, n.a.LaTeX())
     }
     return fmt.Sprintf("\\%v %s", n.name, n.a.LaTeX())
+}
+
+func (n *Func) Equal(iother Node) bool {
+    other, ok := iother.(*Func)
+    return ok && n.name == other.name && n.a.Equal(other.a)
+}
+
+func (n *Func) Derivative() Node {
+    switch n.name {
+    case hash.Sin:
+        return &Expr{
+            op: MultiplyOp,
+            l: &Func{name: hash.Cos, a: n.a},
+            r: n.Derivative(),
+        }
+    default:
+        panic("unknown function")
+    }
 }
 
 func (n *Func) Calc(x complex128, vars Vars) (complex128, error) {
@@ -78,7 +162,7 @@ func (n *Func) Calc(x complex128, vars Vars) (complex128, error) {
     case hash.Log10:
         f = cmplx.Log10
     default:
-        return cmplx.NaN(), ParseErrorf(n.pos, "unknown function '%s'", n.name)
+        return cmplx.NaN(), fmt.Errorf("unknown function '%s'", n.name)
     }
     return f(y), nil
 }
@@ -86,46 +170,54 @@ func (n *Func) Calc(x complex128, vars Vars) (complex128, error) {
 ////////////////
 
 type Expr struct {
-	pos int
 	op  Operator
-	a   Node
-	b   Node
+	l   Node
+	r   Node
 }
 
 func (n *Expr) String() string {
-	return fmt.Sprintf("(%v %v %v)", n.a, n.op, n.b)
+	return fmt.Sprintf("(%v %v %v)", n.l, n.op, n.r)
 }
 
 func (n *Expr) LaTeX() string {
-    a := n.a.LaTeX()
-    if aExpr, ok := n.a.(*Expr); ok && OpPrec[n.op] > OpPrec[aExpr.op] {
-        a = "("+a+")"
-    } else if aFunc, ok := n.a.(*Func); ok && OpPrec[n.op] > OpPrec[FuncOp] {
-        a = fmt.Sprintf("\\%v(%s)", aFunc.name, aFunc.a.LaTeX())
+    l := n.l.LaTeX()
+    if lExpr, ok := n.l.(*Expr); ok && OpPrec[n.op] > OpPrec[lExpr.op] {
+        l = "("+l+")"
+    } else if lFunc, ok := n.l.(*Func); ok && OpPrec[n.op] > OpPrec[FuncOp] {
+        l = fmt.Sprintf("\\%v(%s)", lFunc.name, lFunc.a.LaTeX())
     }
 
-    b := n.b.LaTeX()
+    r := n.r.LaTeX()
     if n.op == PowerOp {
-        b = "{"+b+"}"
-    } else if bExpr, ok := n.b.(*Expr); ok && OpPrec[n.op] > OpPrec[bExpr.op] {
-        b = "("+b+")"
-    } else if _, ok := n.b.(*Func); ok && OpPrec[n.op] > OpPrec[FuncOp] {
-        b = "("+b+")"
+        r = "{"+r+"}"
+    } else if rExpr, ok := n.r.(*Expr); ok && OpPrec[n.op] > OpPrec[rExpr.op] {
+        r = "("+r+")"
+    } else if _, ok := n.r.(*Func); ok && OpPrec[n.op] > OpPrec[FuncOp] {
+        r = "("+r+")"
     }
 
-    if n.op == DivideOp && (len(a) > 1 || len(b) > 1) {
-	    return fmt.Sprintf("\\frac{%s}{%s}", a, b)
+    if n.op == DivideOp && (len(l) > 1 || len(r) > 1) {
+	    return fmt.Sprintf("\\frac{%s}{%s}", l, r)
     }
-	return fmt.Sprintf("%s%v%s", a, n.op, b)
+	return fmt.Sprintf("%s%v%s", l, n.op, r)
+}
+
+func (n *Expr) Equal(iother Node) bool {
+    other, ok := iother.(*Expr)
+    return ok && n.op == other.op && n.l.Equal(other.l) && n.r.Equal(other.r)
+}
+
+func (n *Expr) Derivative() Node {
+    panic("unimplemented")
 }
 
 func (n *Expr) Calc(x complex128, vars Vars) (complex128, error) {
-	a, err := n.a.Calc(x, vars)
+	l, err := n.l.Calc(x, vars)
 	if err != nil {
 		return cmplx.NaN(), err
 	}
 
-	b, err := n.b.Calc(x, vars)
+	r, err := n.r.Calc(x, vars)
 	if err != nil {
 		return cmplx.NaN(), err
 	}
@@ -133,20 +225,20 @@ func (n *Expr) Calc(x complex128, vars Vars) (complex128, error) {
     var y complex128
 	switch n.op {
 	case AddOp:
-        y = a + b
+        y = l + r
 	case SubtractOp:
-        y = a - b
+        y = l - r
 	case MultiplyOp:
-        y = a * b
+        y = l * r
 	case DivideOp:
-        if b == 0 {
-            return cmplx.NaN(), ParseErrorf(n.pos, "division by zero")
+        if r == 0 {
+            return cmplx.NaN(), fmt.Errorf("division by zero")
         }
-        y = a / b
+        y = l / r
 	case PowerOp:
-        y = cmplx.Pow(a, b)
+        y = cmplx.Pow(l, r)
 	default:
-		return cmplx.NaN(), ParseErrorf(n.pos, "unknown operation '%s'", n.op)
+		return cmplx.NaN(), fmt.Errorf("unknown operation '%s'", n.op)
 	}
     return y, nil
 }
@@ -154,7 +246,6 @@ func (n *Expr) Calc(x complex128, vars Vars) (complex128, error) {
 ////////////////
 
 type UnaryExpr struct {
-	pos int
 	op  Operator
 	a   Node
 }
@@ -170,6 +261,15 @@ func (n *UnaryExpr) LaTeX() string {
 	return fmt.Sprintf("%v%s", n.op, n.a.LaTeX())
 }
 
+func (n *UnaryExpr) Equal(iother Node) bool {
+    other, ok := iother.(*UnaryExpr)
+    return ok && n.op == other.op && n.a.Equal(other.a)
+}
+
+func (n *UnaryExpr) Derivative() Node {
+    panic("unimplemented")
+}
+
 func (n *UnaryExpr) Calc(x complex128, vars Vars) (complex128, error) {
 	y, err := n.a.Calc(x, vars)
     if err != nil {
@@ -181,7 +281,6 @@ func (n *UnaryExpr) Calc(x complex128, vars Vars) (complex128, error) {
 ////////////////
 
 type Variable struct {
-	pos  int
 	name string
 }
 
@@ -193,35 +292,25 @@ func (n *Variable) LaTeX() string {
 	return fmt.Sprintf("%s", n.name)
 }
 
+func (n *Variable) Equal(iother Node) bool {
+    other, ok := iother.(*Variable)
+    return ok && n.name == other.name
+}
+
+func (n *Variable) Derivative() Node {
+    return ZeroNode
+}
+
 func (n *Variable) Calc(x complex128, vars Vars) (complex128, error) {
     if _, ok := vars[n.name]; !ok {
-        return cmplx.NaN(), ParseErrorf(n.pos, "undefined variable '%s'", n.name)
+        return cmplx.NaN(), fmt.Errorf("undefined variable '%s'", n.name)
     }
     return vars[n.name], nil
 }
 
 ////////////////
 
-type Argument struct {
-	pos  int
-}
-
-func (n *Argument) String() string {
-	return "'x'"
-}
-
-func (n *Argument) LaTeX() string {
-	return "x"
-}
-
-func (n *Argument) Calc(x complex128, vars Vars) (complex128, error) {
-    return x, nil
-}
-
-////////////////
-
 type Number struct {
-	pos int
 	val complex128
 }
 
@@ -239,6 +328,41 @@ func (n *Number) LaTeX() string {
 	return fmt.Sprintf("%v", n.val)
 }
 
+func (n *Number) Equal(iother Node) bool {
+    other, ok := iother.(*Number)
+    return ok && n.val == other.val
+}
+
+func (n *Number) Derivative() Node {
+    return ZeroNode
+}
+
 func (n *Number) Calc(x complex128, vars Vars) (complex128, error) {
     return n.val, nil
+}
+
+////////////////
+
+type Argument struct {
+}
+
+func (n *Argument) String() string {
+	return "'x'"
+}
+
+func (n *Argument) LaTeX() string {
+	return "x"
+}
+
+func (n *Argument) Equal(iother Node) bool {
+    _, ok := iother.(*Argument)
+    return ok
+}
+
+func (n *Argument) Derivative() Node {
+    return OneNode
+}
+
+func (n *Argument) Calc(x complex128, vars Vars) (complex128, error) {
+    return x, nil
 }
