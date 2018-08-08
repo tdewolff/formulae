@@ -58,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	p.Title.Text = "Formulae"
+	p.Title.Text = "Formula"
 	p.X.Label.Text = "x"
 	p.Y.Label.Text = "y"
 	p.Y.Min = ymin

@@ -24,12 +24,13 @@ import (
 ### Parse
 Parse a formula from string and return a `Function`.
 ``` go
-f := formulae.Parse("sin(cos(x))^2+1/(x*2)+0.001x^(3+x)")
+f := formulae.Parse("sin(cos(x))^2+1/x-1")
 ```
+
 ### Calculate
 Calculate the function for a single `x` value.
 ``` go
-y, err := f.Calc(5+0i) // 390.803...
+y, err := f.Calc(5+0i) // -0.722...
 if err != nil {
     panic(err)
 }
@@ -54,6 +55,12 @@ f.Optimize()
 Obtain the derivative of `f` to `x`.
 ``` go
 df := f.Derivative()
+```
+
+### LaTeX notation
+Export as LaTeX notation
+``` go
+s := f.LaTeX() // $$f(x) = \sin(\cos(x))^{2}+\frac{1}{x}-1$$
 ```
 
 ## Example
