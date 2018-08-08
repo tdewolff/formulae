@@ -30,6 +30,7 @@ var DefaultVars = Vars{
 type Function struct {
 	root Node
     Vars
+    nthDerivative int
 }
 
 func (f *Function) String() string {
@@ -37,7 +38,27 @@ func (f *Function) String() string {
 }
 
 func (f *Function) LaTeX() string {
-    return fmt.Sprintf("f(x) = %s", f.root.LaTeX())
+    fs := "f"
+    if f.nthDerivative == 1 {
+        fs = fmt.Sprintf("\\frac{\\partial}{\\partial x}")
+    } else if f.nthDerivative > 1 {
+        fs = fmt.Sprintf("\\frac{\\partial^{%v}}{\\partial x^{%v}}", f.nthDerivative, f.nthDerivative)
+    }
+    return fmt.Sprintf("%s(x) = %s", fs, f.root.LaTeX())
+}
+
+func (f *Function) Optimize() {
+    f.root = Optimize(f.root)
+}
+
+func (f *Function) Derivative() *Function {
+    root := f.root.Derivative()
+    root = Optimize(root)
+    return &Function{
+        root: root,
+        Vars: f.Vars,
+        nthDerivative: f.nthDerivative + 1,
+    }
 }
 
 func (f *Function) Calc(x complex128) (complex128, error) {
