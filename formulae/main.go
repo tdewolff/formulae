@@ -18,10 +18,14 @@ func main() {
 		log.Fatal(errs)
 	}
 
+    dformula := formula.Derivative()
+
     fmt.Println(formula.String())
     fmt.Println(formula.LaTeX())
+    fmt.Println(dformula.String())
+    fmt.Println(dformula.LaTeX())
 
-    err := writeHTML("math.html", formula.LaTeX())
+    err := writeHTML("math.html", formula.LaTeX(), dformula.LaTeX())
     if err != nil {
         log.Fatal(err)
     }
@@ -64,7 +68,7 @@ func main() {
 	}
 }
 
-func writeHTML(filename, latex string) error {
+func writeHTML(filename string, latex ...string) error {
     f, err := os.Create(filename)
     if err != nil {
         return err
@@ -75,9 +79,12 @@ func writeHTML(filename, latex string) error {
     <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
 </head>
 <body>
-    <p>$$%s$$</p>
-</body>
+`)
+    for _, x := range latex {
+        fmt.Fprintf(f, "    <p>$$%s$$</p>\n", x)
+    }
+    fmt.Fprintf(f, `</body>
 </html>
-`, latex)
+`)
     return f.Close()
 }

@@ -38,13 +38,13 @@ func (f *Function) String() string {
 }
 
 func (f *Function) LaTeX() string {
-    fs := "f"
+    d := ""
     if f.nthDerivative == 1 {
-        fs = fmt.Sprintf("\\frac{\\partial}{\\partial x}")
+        d = fmt.Sprintf("\\frac{\\partial}{\\partial x} ")
     } else if f.nthDerivative > 1 {
-        fs = fmt.Sprintf("\\frac{\\partial^{%v}}{\\partial x^{%v}}", f.nthDerivative, f.nthDerivative)
+        d = fmt.Sprintf("\\frac{\\partial^{%v}}{\\partial x^{%v}} ", f.nthDerivative, f.nthDerivative)
     }
-    return fmt.Sprintf("%s(x) = %s", fs, f.root.LaTeX())
+    return fmt.Sprintf("%sf(x) = %s", d, f.root.LaTeX())
 }
 
 func (f *Function) Optimize() {
