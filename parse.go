@@ -44,7 +44,7 @@ type ParseError struct {
 }
 
 func (pe ParseError) Pos() int {
-    return pe.pos
+	return pe.pos
 }
 
 func (pe ParseError) Error() string {
@@ -139,7 +139,7 @@ LOOP:
 		return nil, []error{fmt.Errorf("some operands remain unparsed")}
 	}
 
-    vars := DefaultVars.Duplicate()
+	vars := DefaultVars.Duplicate()
 	return &Function{root: root, Vars: vars}, nil
 }
 
@@ -197,15 +197,20 @@ func (p *Parser) popNode() (Node, error) {
 		}
 		return &Number{val: complex(fr, fi)}, nil
 	case IdentifierToken:
-        if len(tok.data) == 1 && tok.data[0] == 'x' {
-            return &Argument{}, nil
-        } else {
-		    return &Variable{name: string(tok.data)}, nil
-        }
+		if len(tok.data) == 1 && tok.data[0] == 'x' {
+			return &Argument{}, nil
+		} else {
+			return &Variable{name: string(tok.data)}, nil
+		}
 	case OperatorToken:
 		switch tok.op {
 		case FuncOp:
 			a, _ := p.popNode()
+			if tok.function == hash.Exp {
+				return &Expr{op: PowerOp, l: &Variable{name: "e"}, r: a}, nil
+			} else if tok.function == hash.Ln {
+				tok.function = hash.Log
+			}
 			return &Func{name: tok.function, a: a}, nil
 		case OpenOp:
 			return p.popNode()

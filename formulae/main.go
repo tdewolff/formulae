@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
-    "fmt"
-    "os"
+	"os"
 
 	"github.com/tdewolff/formulae"
 	"gonum.org/v1/plot"
@@ -18,17 +18,12 @@ func main() {
 		log.Fatal(errs)
 	}
 
-    dformula := formula.Derivative()
+	dformula := formula.Derivative()
 
-    fmt.Println(formula.String())
-    fmt.Println(formula.LaTeX())
-    fmt.Println(dformula.String())
-    fmt.Println(dformula.LaTeX())
-
-    err := writeHTML("math.html", formula.LaTeX(), dformula.LaTeX())
-    if err != nil {
-        log.Fatal(err)
-    }
+	err := writeHTML("math.html", formula.LaTeX(), dformula.LaTeX())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	xs, ys, errs := formula.Interval(0.1, 0.1, 5.0)
 	if len(errs) > 0 {
@@ -69,22 +64,22 @@ func main() {
 }
 
 func writeHTML(filename string, latex ...string) error {
-    f, err := os.Create(filename)
-    if err != nil {
-        return err
-    }
-    fmt.Fprintf(f, `<!DOCTYPE html>
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(f, `<!DOCTYPE html>
 <html>
 <head>
     <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
 </head>
 <body>
 `)
-    for _, x := range latex {
-        fmt.Fprintf(f, "    <p>$$%s$$</p>\n", x)
-    }
-    fmt.Fprintf(f, `</body>
+	for _, x := range latex {
+		fmt.Fprintf(f, "    <p>$$%s$$</p>\n", x)
+	}
+	fmt.Fprintf(f, `</body>
 </html>
 `)
-    return f.Close()
+	return f.Close()
 }
