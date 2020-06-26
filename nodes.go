@@ -260,9 +260,11 @@ func (n *Func) LaTeX() string {
 	if n.name == hash.Log {
 		name = "log_e"
 	} else if n.name == hash.Log {
-		name = "log_10"
+		name = "log_{10}"
+	} else if n.name == hash.Sqrt {
+		return fmt.Sprintf("\\sqrt{%s}", n.a.LaTeX())
 	}
-	return fmt.Sprintf("\\%s(%s)", name, n.a.LaTeX())
+	return fmt.Sprintf("\\%s\\left(%s\\right)", name, n.a.LaTeX())
 }
 
 func (n *Func) Equal(iother Node) bool {

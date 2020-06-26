@@ -31,6 +31,7 @@ func TestParse(t *testing.T) {
 		{"1/(x*2)+3", "1/(x*2)+3"},
 		{"5x", "5*x"},
 		{"exp(5)", "e^5"},
+		{"log10(5)", "log10(5)"},
 	}
 
 	for _, test := range tests {
