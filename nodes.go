@@ -258,11 +258,16 @@ func (n *Func) String() string {
 func (n *Func) LaTeX() string {
 	name := n.name.String()
 	if n.name == hash.Log {
-		name = "log_e"
-	} else if n.name == hash.Log {
+		name = "log"
+	} else if n.name == hash.Log10 {
 		name = "log_{10}"
 	} else if n.name == hash.Sqrt {
 		return fmt.Sprintf("\\sqrt{%s}", n.a.LaTeX())
+	}
+	_, isVariable := n.a.(*Variable)
+	_, isNumber := n.a.(*Number)
+	if isVariable || isNumber {
+		return fmt.Sprintf("\\%s %s", name, n.a.LaTeX())
 	}
 	return fmt.Sprintf("\\%s\\left(%s\\right)", name, n.a.LaTeX())
 }
